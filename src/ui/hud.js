@@ -62,6 +62,8 @@ export default class HUD {
       barrageVeil: document.getElementById('barrage-veil'),
       viewFade: document.getElementById('view-fade'),
       viewCaption: document.getElementById('view-caption'),
+      cineBars: document.getElementById('cine-bars'),
+      cineLabel: document.getElementById('cine-label'),
     };
     this._flash = 0;
     this._buildInstruments();
@@ -152,6 +154,10 @@ export default class HUD {
   setCloudVeil(v) { this.el.cloudVeil.style.opacity = (v * 0.7).toFixed(2); }
   setBarrage(v) { this.el.barrageVeil.style.opacity = (v * 0.7).toFixed(2); }
   setViewCaption(text) { if (this.el.viewCaption) this.el.viewCaption.textContent = text; }
+  setCinematic(on, label = '') {
+    this.el.cineBars.classList.toggle('active', on);
+    if (on) this.el.cineLabel.textContent = label;
+  }
   flashViewFade() {
     const f = this.el.viewFade;
     if (!f) return;

@@ -129,6 +129,22 @@ function launch(index) {
   game.start(index);
 }
 
+// rank earned from the mission score
+const RANKS = [
+  { min: 0, name: 'Recruit' },
+  { min: 200, name: 'Cadet' },
+  { min: 400, name: 'Sergeant' },
+  { min: 600, name: 'Lieutenant' },
+  { min: 850, name: 'Captain' },
+  { min: 1150, name: 'Major' },
+  { min: 1500, name: 'Ace of Aces' },
+];
+function rankForScore(score) {
+  let idx = 0;
+  RANKS.forEach((r, i) => { if (score >= r.min) idx = i; });
+  return { name: RANKS[idx].name, pips: idx };
+}
+
 game.onMissionEnd = (win, info) => {
   if (win && info.missionIndex >= highestUnlocked && highestUnlocked < MISSIONS.length - 1) {
     highestUnlocked = info.missionIndex + 1;
@@ -137,6 +153,7 @@ game.onMissionEnd = (win, info) => {
   const summary = document.getElementById('end-summary');
   title.textContent = win ? 'MISSION COMPLETE' : 'SHOT DOWN';
   title.className = win ? 'win' : 'lose';
+  const rank = rankForScore(info.score);
   const flavour = win ? 'The objective is yours, Captain.' : 'Your Camel went down over the lines.';
   const rows = [
     ['Aircraft downed', info.kills],
@@ -148,9 +165,13 @@ game.onMissionEnd = (win, info) => {
     .join('');
   const unlock = win && highestUnlocked > info.missionIndex
     ? '<div class="end-unlock">NEW SORTIE UNLOCKED</div>' : '';
+  const pips = '★'.repeat(rank.pips);
   summary.innerHTML =
     `<div class="end-flavour">${flavour}</div>${stats}` +
-    `<div class="end-score"><span>SCORE</span><span>${info.score}</span></div>${unlock}`;
+    `<div class="end-score"><span>SCORE</span><span>${info.score}</span></div>` +
+    `<div class="end-rank"><span class="end-rank-label">RANK</span>` +
+    `<span class="end-rank-name">${rank.name}</span>` +
+    `<span class="end-rank-pips">${pips}</span></div>${unlock}`;
   overlay.classList.remove('hidden');
   endScreen.classList.remove('hidden');
 };

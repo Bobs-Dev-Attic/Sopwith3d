@@ -115,6 +115,7 @@ export class Bombs {
     m.userData = { vel: velocity.clone().multiplyScalar(0.6), life: 0 };
     this.scene.add(m);
     this.active.push(m);
+    return m;
   }
 
   // groundTargets: [{ pos, radius, alive, hit(dmg) }]

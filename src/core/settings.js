@@ -7,6 +7,7 @@ const defaults = {
   aimAssist: false,
   reinforcedHull: false,
   unlimitedFuel: false,
+  bombCam: true,
 };
 
 export const OPTION_DEFS = [
@@ -14,6 +15,7 @@ export const OPTION_DEFS = [
   { key: 'aimAssist', name: 'Aim Assist', desc: 'Your guns nudge onto the nearest target in your sights.' },
   { key: 'reinforcedHull', name: 'Reinforced Hull', desc: 'Take half damage from bullets, flak and shells.' },
   { key: 'unlimitedFuel', name: 'Unlimited Fuel', desc: 'Never run dry — loiter as long as you like.' },
+  { key: 'bombCam', name: 'Bomb Camera', desc: 'Cut to a cinematic view following each bomb to impact (tap to skip).' },
 ];
 
 class Settings {
