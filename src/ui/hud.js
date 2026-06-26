@@ -49,6 +49,7 @@ export default class HUD {
     this.el = {
       hud: document.getElementById('hud'),
       kills: document.getElementById('kills-val'),
+      score: document.getElementById('score-val'),
       objective: document.querySelector('#objective .objective-text'),
       health: document.getElementById('health-fill'),
       bombs: document.getElementById('bomb-count'),
@@ -96,6 +97,7 @@ export default class HUD {
   }
 
   setKills(n) { this.el.kills.textContent = n; }
+  setScore(n) { this.el.score.textContent = n; }
   setObjective(text) { this.el.objective.textContent = text; }
   setCloudVeil(v) { this.el.cloudVeil.style.opacity = (v * 0.7).toFixed(2); }
   setBarrage(v) { this.el.barrageVeil.style.opacity = (v * 0.7).toFixed(2); }

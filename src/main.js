@@ -100,11 +100,20 @@ game.onMissionEnd = (win, info) => {
   const summary = document.getElementById('end-summary');
   title.textContent = win ? 'MISSION COMPLETE' : 'SHOT DOWN';
   title.className = win ? 'win' : 'lose';
-  const lines = [];
-  lines.push(win ? 'The objective is yours, Captain.' : 'Your Camel went down over the lines.');
-  lines.push(`Confirmed kills: ${info.kills}`);
-  if (win && highestUnlocked > info.missionIndex) lines.push('New sortie unlocked.');
-  summary.innerHTML = lines.map((l) => `<div>${l}</div>`).join('');
+  const flavour = win ? 'The objective is yours, Captain.' : 'Your Camel went down over the lines.';
+  const rows = [
+    ['Aircraft downed', info.kills],
+    ['Ground targets', info.groundKills],
+  ];
+  if (info.bonus) rows.push(['Mission bonus', `+${info.bonus}`]);
+  const stats = rows
+    .map(([k, v]) => `<div class="end-row"><span>${k}</span><span>${v}</span></div>`)
+    .join('');
+  const unlock = win && highestUnlocked > info.missionIndex
+    ? '<div class="end-unlock">NEW SORTIE UNLOCKED</div>' : '';
+  summary.innerHTML =
+    `<div class="end-flavour">${flavour}</div>${stats}` +
+    `<div class="end-score"><span>SCORE</span><span>${info.score}</span></div>${unlock}`;
   overlay.classList.remove('hidden');
   endScreen.classList.remove('hidden');
 };
