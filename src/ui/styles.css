@@ -97,6 +97,16 @@ html, body {
   border: 1px solid var(--brass); box-shadow: 0 2px 5px rgba(0,0,0,0.6);
 }
 
+.sound-toggle {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 50%;
+  transform: translateX(-50%); pointer-events: auto; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--panel-edge); color: var(--parchment);
+  font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px); box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.sound-toggle:active { transform: translateX(-50%) scale(0.92); }
+
 #gunsight {
   position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
   width: 64px; height: 64px; pointer-events: none; opacity: 0.7;

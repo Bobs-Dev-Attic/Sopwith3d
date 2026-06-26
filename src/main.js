@@ -38,6 +38,21 @@ game.setInput(input);
 // expose for debugging / automated checks
 window.__sop = { game, input, THREE };
 
+// audio needs a user gesture to start; unlock on the first interaction
+const unlockAudio = () => game.audio.unlock();
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+
+// sound on/off toggle
+const soundBtn = document.getElementById('sound-toggle');
+const syncSoundGlyph = () => { soundBtn.textContent = game.audio.muted ? '🔇' : '🔊'; };
+syncSoundGlyph();
+soundBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  game.audio.unlock();
+  game.audio.toggleMuted();
+  syncSoundGlyph();
+});
+
 // --- menu wiring ------------------------------------------------------------
 const overlay = document.getElementById('overlay');
 const titleScreen = document.getElementById('title-screen');
