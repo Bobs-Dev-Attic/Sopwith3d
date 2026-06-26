@@ -143,7 +143,7 @@ export class Bombs {
   }
 
   _detonate(pos, groundTargets) {
-    if (this.fx) this.fx.groundBurst(pos, 2.2);
+    // visuals/audio are handled by the game's onExplode (bigger blast + debris)
     const blast = 55;
     if (groundTargets) {
       for (const t of groundTargets) {
