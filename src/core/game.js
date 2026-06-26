@@ -46,6 +46,15 @@ export default class Game {
 
     this.peaceful = false;   // training sector: hostiles hold fire
 
+    // bomb cam
+    this._bombCam = false;
+    this._bombCamTarget = null;
+    this._bcTmp = new THREE.Vector3();
+    this._bcHoriz = new THREE.Vector3();
+    this._bcSide = new THREE.Vector3();
+    this._bcImpact = new THREE.Vector3();
+    this._bcUp = new THREE.Vector3(0, 1, 0);
+
     this.running = false;
     this._viewMode = 'chase';
     this.kills = 0;
@@ -80,6 +89,9 @@ export default class Game {
     this._crashed = false;
     this._postCrash = 0;
     this._viewMode = 'chase';
+    this._bombCam = false;
+    this._bombCamTarget = null;
+    this.hud.setCinematic(false);
     if (this.plane.parts.head) this.plane.parts.head.visible = true;
     this.hud.setViewCaption('VIEW');
 
@@ -226,6 +238,67 @@ export default class Game {
     this.plane.group.visible = false;
   }
 
+  // --- bomb cam: cut to a chase view of the falling bomb to its impact ---
+  _enterBombCam(bomb) {
+    if (this._bombCam || !bomb || !settings.get('bombCam')) return;
+    this._bombCam = true;
+    this._bombCamTarget = bomb;
+    this._bcTime = 0;
+    this._bcHold = 0;
+    this._bcImpact.copy(bomb.position);
+    this._bcPrevAssist = this.plane.flightAssist;
+    this.input.firing = false;          // don't carry a held trigger in
+    this.hud.setCinematic(true, 'BOMB AWAY');
+  }
+
+  _exitBombCam() {
+    if (!this._bombCam) return;
+    this._bombCam = false;
+    this._bombCamTarget = null;
+    this.plane.flightAssist = this._bcPrevAssist;
+    this.chase.snap();
+    this.hud.setCinematic(false);
+  }
+
+  _updateBombCam(dt) {
+    this._bcTime += dt;
+    // tap bombs again, or run long, to skip
+    if (this.input.consumeBomb() || this._bcTime > 6.5 || !this.plane.alive) {
+      this._exitBombCam();
+      return;
+    }
+
+    const bomb = this._bombCamTarget;
+    const flying = bomb && this.bombs.active.includes(bomb);
+    const k = 1 - Math.exp(-6 * dt);
+
+    if (flying) {
+      this._bcImpact.copy(bomb.position);
+      const v = bomb.userData.vel;
+      this._bcHoriz.set(v.x, 0, v.z);
+      if (this._bcHoriz.lengthSq() < 0.01) this._bcHoriz.set(0, 0, -1);
+      this._bcHoriz.normalize();
+      this._bcSide.crossVectors(this._bcHoriz, this._bcUp).normalize();
+      // up, off to the side, slightly trailing
+      this._bcTmp.copy(bomb.position)
+        .addScaledVector(this._bcUp, 7)
+        .addScaledVector(this._bcSide, 9)
+        .addScaledVector(this._bcHoriz, -5);
+      this._bcTmp.y = Math.max(this._bcTmp.y, bomb.position.y + 3, 4);
+      this.camera.position.lerp(this._bcTmp, k);
+      this.camera.lookAt(
+        bomb.position.x + this._bcHoriz.x * 4,
+        bomb.position.y - 2,
+        bomb.position.z + this._bcHoriz.z * 4
+      );
+    } else {
+      // detonated — hold on the impact for a beat, then return
+      this._bcHold += dt;
+      this.camera.lookAt(this._bcImpact);
+      if (this._bcHold > 0.8) this._exitBombCam();
+    }
+  }
+
   _spawnEnemy(pos, heading) {
     const color = this._enemyColor[this.enemies.length % this._enemyColor.length];
     const e = new EnemyPlane(this.scene, this.fx, color);
@@ -257,11 +330,18 @@ export default class Game {
 
     // --- player control ---
     if (this.plane.alive) {
-      this.plane.setStick(this.input.pitch, this.input.yaw);
-      this.plane.setThrottle(this.input.throttle);
-      this._handlePlayerWeapons(dt);
-      this._enforceBoundary(dt);
-      this._ambientFlak(dt);
+      if (this._bombCam) {
+        // controls are suspended during the cinematic — hold her level
+        this.plane.flightAssist = true;
+        this.plane.setStick(0, 0);
+        this.plane.setThrottle(this.input.throttle);
+      } else {
+        this.plane.setStick(this.input.pitch, this.input.yaw);
+        this.plane.setThrottle(this.input.throttle);
+        this._handlePlayerWeapons(dt);
+        this._enforceBoundary(dt);
+        this._ambientFlak(dt);
+      }
     }
     this.plane.update(dt);
     this._checkGround(this.plane, true);
@@ -315,16 +395,20 @@ export default class Game {
     this.audio.update(this.plane.rpm, this.plane.state.throttle, this.plane.state.speed, this.plane.alive);
     this.hud.update(dt, this.plane);
 
-    // cockpit view is disabled while going down (the wreck is hidden)
-    const zoom = this.plane.alive ? this.input.cameraZoom : Math.max(0.3, this.input.cameraZoom);
-    this.chase.setZoom(zoom);
-    if (this.chase.mode !== this._viewMode) {
-      this._viewMode = this.chase.mode;
-      this.hud.flashViewFade();
-      this.hud.setViewCaption(this._viewMode === 'cockpit' ? 'COCKPIT' : 'VIEW');
-      if (this.plane.parts.head) this.plane.parts.head.visible = this._viewMode !== 'cockpit';
+    if (this._bombCam) {
+      this._updateBombCam(dt);
+    } else {
+      // cockpit view is disabled while going down (the wreck is hidden)
+      const zoom = this.plane.alive ? this.input.cameraZoom : Math.max(0.3, this.input.cameraZoom);
+      this.chase.setZoom(zoom);
+      if (this.chase.mode !== this._viewMode) {
+        this._viewMode = this.chase.mode;
+        this.hud.flashViewFade();
+        this.hud.setViewCaption(this._viewMode === 'cockpit' ? 'COCKPIT' : 'VIEW');
+        if (this.plane.parts.head) this.plane.parts.head.visible = this._viewMode !== 'cockpit';
+      }
+      this.chase.follow(this.plane, dt);
     }
-    this.chase.follow(this.plane, dt);
 
     // whiteout when the camera plunges into a cloud
     this.hud.setCloudVeil(this.clouds.whiteoutAt(this.camera.position));
@@ -357,7 +441,8 @@ export default class Game {
     if (this.input.consumeBomb() && this.plane.bombs > 0) {
       this.plane.bombs--;
       const belly = this.plane.state.position.clone().add(new THREE.Vector3(0, -1.2, 0));
-      this.bombs.drop(belly, this.plane.state.velocity);
+      const bomb = this.bombs.drop(belly, this.plane.state.velocity);
+      this._enterBombCam(bomb);
     }
   }
 
@@ -467,6 +552,7 @@ export default class Game {
 
   _end(win) {
     this.running = false;
+    this._exitBombCam();
     this.hud.hide();
     this.audio.endMission();
     const bonus = win ? 500 : 0;

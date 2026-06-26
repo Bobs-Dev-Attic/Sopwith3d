@@ -147,6 +147,19 @@ html, body {
   background: radial-gradient(circle at 50% 50%, rgba(140,30,20,0) 40%, rgba(150,20,12,0.55) 100%);
 }
 
+/* cinematic letterbox for the bomb cam */
+#cine-bars { position: absolute; inset: 0; pointer-events: none; }
+.cine-bar { position: absolute; left: 0; right: 0; height: 0; background: #000;
+  transition: height 0.25s ease; }
+.cine-bar.top { top: 0; } .cine-bar.bottom { bottom: 0; }
+#cine-bars.active .cine-bar { height: 9%; }
+#cine-label {
+  position: absolute; top: 11%; left: 50%; transform: translateX(-50%);
+  color: var(--brass); letter-spacing: 5px; font-size: 15px; opacity: 0;
+  text-shadow: 0 0 10px #000, 0 2px 3px #000; transition: opacity 0.25s ease 0.1s;
+}
+#cine-bars.active #cine-label { opacity: 1; }
+
 #view-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 @keyframes viewfade { 0% { opacity: 0; } 35% { opacity: 0.85; } 100% { opacity: 0; } }
 
@@ -322,6 +335,14 @@ html, body {
 }
 .end-score span:first-child { color: var(--brass); }
 .end-score span:last-child { color: var(--parchment); font-weight: bold; text-shadow: 0 0 10px rgba(232,196,106,0.4); }
+.end-rank {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  margin: 10px auto 0; max-width: 280px;
+}
+.end-rank-label { color: var(--parchment-dim); letter-spacing: 3px; font-size: 11px; }
+.end-rank-name { color: var(--brass); font-size: 22px; letter-spacing: 2px; font-weight: bold;
+  text-shadow: 0 0 12px rgba(232,196,106,0.4); }
+.end-rank-pips { color: #e8c46a; font-size: 14px; letter-spacing: 1px; }
 .end-unlock { margin-top: 16px; color: #9bb04a; letter-spacing: 3px; font-size: 12px; }
 
 .menu-btn {
