@@ -1,6 +1,6 @@
 // Service worker for offline play. Bump CACHE on each release so clients
 // pick up new assets (old caches are purged on activate).
-const CACHE = 'sopwith-v0.17.0';
+const CACHE = 'sopwith-v0.18.0';
 const CORE = [
   './',
   './index.html',
@@ -12,10 +12,17 @@ const CORE = [
 ];
 
 self.addEventListener('install', (e) => {
-  self.skipWaiting();
+  // Don't auto-skip: a new version installs and *waits* until the page applies
+  // it (via the Update button -> SKIP_WAITING), so updates are controlled. A
+  // first-ever install still activates immediately (there's no active worker).
   e.waitUntil(
     caches.open(CACHE).then((c) => Promise.allSettled(CORE.map((u) => c.add(u))))
   );
+});
+
+// the page posts this to activate a waiting update on demand
+self.addEventListener('message', (e) => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
