@@ -14,12 +14,36 @@ function softTexture(inner, outer) {
   return new THREE.CanvasTexture(c);
 }
 
+// Expanding shockwave ring laid flat on the ground.
+function ringTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 128, 128);
+  x.strokeStyle = 'rgba(255,230,180,0.9)';
+  x.lineWidth = 10;
+  x.beginPath();
+  x.arc(64, 64, 52, 0, Math.PI * 2);
+  x.stroke();
+  x.strokeStyle = 'rgba(180,90,40,0.5)';
+  x.lineWidth = 22;
+  x.beginPath();
+  x.arc(64, 64, 44, 0, Math.PI * 2);
+  x.stroke();
+  return new THREE.CanvasTexture(c);
+}
+
 export default class ParticleSystem {
   constructor(scene) {
     this.scene = scene;
     this.smokeTex = softTexture('rgba(120,116,108,0.9)', 'rgba(60,58,54,0.5)');
     this.fireTex = softTexture('rgba(255,210,120,1)', 'rgba(200,70,20,0.6)');
     this.dustTex = softTexture('rgba(150,130,95,0.9)', 'rgba(90,75,50,0.4)');
+
+    // shockwave rings (flat, expanding planes)
+    this.ringTex = ringTexture();
+    this.ringGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+    this.rings = [];
 
     this.pool = [];
     this.active = [];
@@ -87,40 +111,71 @@ export default class ParticleSystem {
   }
 
   explosion(pos, scale = 1) {
-    for (let i = 0; i < 10 * scale; i++) {
+    for (let i = 0; i < 12 * scale; i++) {
       const v = new THREE.Vector3(
-        (Math.random() - 0.5) * 30,
-        Math.random() * 22,
-        (Math.random() - 0.5) * 30
+        (Math.random() - 0.5) * 36 * scale,
+        Math.random() * 26 * scale,
+        (Math.random() - 0.5) * 36 * scale
       );
       this._spawn(pos, {
-        tex: this.fireTex, additive: true, size: 4 * scale + Math.random() * 4,
-        maxLife: 0.5 + Math.random() * 0.3, grow: 14, vel: v, opacity: 1,
+        tex: this.fireTex, additive: true, size: 5 * scale + Math.random() * 5 * scale,
+        maxLife: 0.5 + Math.random() * 0.35, grow: 18 * scale, vel: v, opacity: 1,
       });
     }
-    for (let i = 0; i < 8 * scale; i++) {
+    for (let i = 0; i < 9 * scale; i++) {
       const v = new THREE.Vector3(
-        (Math.random() - 0.5) * 18, Math.random() * 14, (Math.random() - 0.5) * 18
+        (Math.random() - 0.5) * 22, Math.random() * 16, (Math.random() - 0.5) * 22
       );
       this._spawn(pos, {
-        tex: this.smokeTex, size: 6 * scale, maxLife: 1.8, grow: 20, rise: 10,
-        color: 0x1f1d18, vel: v, opacity: 0.85,
+        tex: this.smokeTex, size: 7 * scale, maxLife: 2.0, grow: 24 * scale, rise: 11,
+        color: 0x1f1d18, vel: v, opacity: 0.88,
       });
     }
   }
 
-  // ground impact dust + fire
+  // ground impact dust + fire — a big, billowing blast
   groundBurst(pos, scale = 1) {
-    for (let i = 0; i < 10 * scale; i++) {
-      const v = new THREE.Vector3(
-        (Math.random() - 0.5) * 26, Math.random() * 16 + 4, (Math.random() - 0.5) * 26
-      );
+    // bright initial fireball
+    for (let i = 0; i < 4; i++) {
       this._spawn(pos, {
-        tex: this.dustTex, size: 5 * scale, maxLife: 1.4, grow: 18, rise: 2,
-        color: 0x9a8a64, vel: v, opacity: 0.8,
+        tex: this.fireTex, additive: true, size: 9 * scale + Math.random() * 6 * scale,
+        maxLife: 0.45, grow: 26 * scale, vel: new THREE.Vector3((Math.random() - 0.5) * 10, Math.random() * 14, (Math.random() - 0.5) * 10),
+        opacity: 1,
       });
     }
-    this.explosion(pos, scale * 0.7);
+    // kicked-up dirt
+    for (let i = 0; i < 16 * scale; i++) {
+      const v = new THREE.Vector3(
+        (Math.random() - 0.5) * 38 * scale, Math.random() * 26 + 6, (Math.random() - 0.5) * 38 * scale
+      );
+      this._spawn(pos, {
+        tex: this.dustTex, size: 6 * scale, maxLife: 1.8, grow: 24 * scale, rise: 2,
+        color: 0x8c7c58, vel: v, opacity: 0.85,
+      });
+    }
+    // rolling black smoke column
+    for (let i = 0; i < 6 * scale; i++) {
+      const v = new THREE.Vector3((Math.random() - 0.5) * 14, Math.random() * 18 + 6, (Math.random() - 0.5) * 14);
+      this._spawn(pos, {
+        tex: this.smokeTex, size: 8 * scale, maxLife: 2.6, grow: 26 * scale, rise: 14,
+        color: 0x1b1913, vel: v, opacity: 0.92,
+      });
+    }
+    this.shockwave(pos, scale);
+    this.explosion(pos, scale * 0.8);
+  }
+
+  // flat expanding shockwave ring on the deck
+  shockwave(pos, scale = 1) {
+    const m = new THREE.Mesh(this.ringGeo, new THREE.MeshBasicMaterial({
+      map: this.ringTex, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: 0.8,
+    }));
+    m.position.set(pos.x, 1.5, pos.z);
+    const start = 6 * scale, end = 70 * scale;
+    m.scale.set(start, start, start);
+    this.scene.add(m);
+    this.rings.push({ m, life: 0, maxLife: 0.6, start, end });
   }
 
   // anti-aircraft flak: a sharp flash, a lingering oily black puff, and sparks
@@ -149,6 +204,22 @@ export default class ParticleSystem {
   }
 
   update(dt) {
+    // expanding shockwave rings
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const r = this.rings[i];
+      r.life += dt;
+      const t = r.life / r.maxLife;
+      if (t >= 1) {
+        this.scene.remove(r.m);
+        r.m.material.dispose();
+        this.rings.splice(i, 1);
+        continue;
+      }
+      const s = r.start + (r.end - r.start) * t;
+      r.m.scale.set(s, s, s);
+      r.m.material.opacity = 0.8 * (1 - t);
+    }
+
     for (let i = this.active.length - 1; i >= 0; i--) {
       const s = this.active[i];
       const d = s.userData;

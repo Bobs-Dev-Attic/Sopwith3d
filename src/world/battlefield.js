@@ -184,7 +184,6 @@ export default class Battlefield {
     t.range = 1100;
     t.update = (dt, player, fireCb) => this._updateNest(t, dt, player, fireCb);
     t.onDestroyed = () => {
-      this.fx.groundBurst(t.pos, 1.6);
       mount.visible = false;
       ring.material = M.sandbagDark;
     };
@@ -243,7 +242,6 @@ export default class Battlefield {
       this.root.add(g);
       const t = new GroundTarget('bunker', g, new THREE.Vector3(x, 2.5, z), 9, 100);
       t.onDestroyed = () => {
-        this.fx.groundBurst(t.pos, 2.4);
         body.material = M.bark;
         roof.rotation.z = 0.3;
         roof.position.y = 4.5;
@@ -299,7 +297,6 @@ export default class Battlefield {
         t.pos.y = envelope.position.y;
       };
       t.onDestroyed = () => {
-        this.fx.explosion(t.pos, 2.6);
         envelope.scale.set(0.4, 0.3, 0.4);
         envelope.material = mat(0x2a241a);
       };

@@ -5,6 +5,7 @@ import Battlefield from '../world/battlefield.js';
 import Plane from '../entities/Plane.js';
 import EnemyPlane from '../entities/EnemyPlane.js';
 import ParticleSystem from '../fx/particles.js';
+import Debris from '../fx/debris.js';
 import { Projectiles, Bombs } from '../entities/weapons.js';
 import ChaseCamera from './chaseCamera.js';
 import { steerToward } from '../entities/steering.js';
@@ -21,6 +22,7 @@ export default class Game {
     this.camera = camera;
 
     this.fx = new ParticleSystem(scene);
+    this.debris = new Debris(scene);
     this.sky = setupSky(scene);
     this.terrain = buildTerrain(scene);
     this.clouds = new Clouds(scene);
@@ -67,6 +69,8 @@ export default class Game {
     this._tracerAcc = 0;
     this._barrageDmgAcc = 0;
     this._oobTimer = 0;
+    this._crashed = false;
+    this._postCrash = 0;
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
@@ -183,6 +187,26 @@ export default class Game {
     this.projectiles.fire(origin, aim, 560, 'enemy', 8);
   }
 
+  // big ground blast: fireball + dirt + shockwave + flying debris + boom
+  _groundExplosion(pos, size = 2.6) {
+    const p = pos.clone(); p.y = Math.max(0, p.y);
+    this.fx.groundBurst(p, size);
+    this.debris.burst(p, Math.round(10 + size * 6), { spread: 14 + size * 6, up: 14 + size * 5 });
+    this.audio.explosion(Math.min(1.4, 0.6 + size * 0.25));
+  }
+
+  // the Camel hits the deck — one decisive blast, then hold for the dialog
+  _crashImpact() {
+    if (this._crashed) return;
+    this._crashed = true;
+    this._postCrash = 0;
+    const p = this.plane.state.position.clone();
+    p.y = Math.max(0, p.y);
+    this._groundExplosion(p, 3.4);
+    this.debris.burst(p, 22, { spread: 26, up: 22 });   // extra wreckage
+    this.plane.group.visible = false;
+  }
+
   _spawnEnemy(pos, heading) {
     const color = this._enemyColor[this.enemies.length % this._enemyColor.length];
     const e = new EnemyPlane(this.scene, this.fx, color);
@@ -204,6 +228,7 @@ export default class Game {
   update(dt) {
     // cosmetic systems run even on menus
     this.fx.update(dt);
+    this.debris.update(dt);
     this.sky.update(dt, this.plane.state.position);
     this.clouds.update(dt);
 
@@ -237,22 +262,29 @@ export default class Game {
     // --- weapons & collisions ---
     const colliders = this._buildColliders();
     this.projectiles.update(dt, colliders);
-    this.bombs.update(dt, this.battlefield.targets, () => this.audio.groundBurst(2.2));
+    this.bombs.update(dt, this.battlefield.targets, (pos) => this._groundExplosion(pos, 3.2));
 
     this._tallyKills();
 
     const status = this.missions.update();
     if (status === 'won') return this._end(true);
 
-    // --- game over: the Camel has crashed or been blown out of the sky ---
+    // --- game over: let the Camel fall and crash, then show the dialog ---
     if (!this.plane.alive) {
       if (!this._deathSoundPlayed) {
         this._deathSoundPlayed = true;
-        this.audio.explosion(2.2);
+        this.audio.explosion(1.8);
         this.hud.banner('SHOT DOWN');
       }
       this._deathTimer += dt;
-      if (this._deathTimer > 2.6) return this._end(false);
+      // detect the wreck striking the ground
+      if (!this._crashed && this.plane.state.position.y <= 3) this._crashImpact();
+      if (this._crashed) {
+        this._postCrash += dt;
+        if (this._postCrash > 1.6) return this._end(false);
+      } else if (this._deathTimer > 7) {
+        return this._end(false);   // fallback if it never lands
+      }
     }
 
     if (this.plane.fuelOut && !this._fuelWarned) {
@@ -318,15 +350,16 @@ export default class Game {
 
   _checkGround(plane, isPlayer) {
     if (!plane.alive) {
+      if (isPlayer && !this._crashed && plane.state.position.y <= 2) this._crashImpact();
       if (plane.state.position.y < -30) plane.group.visible = false;
       return;
     }
     if (plane.state.position.y <= 2) {
       plane.state.position.y = 2;
       if (isPlayer) {
-        // hitting the deck in a fighter is a crash — game over
+        // flying into the deck is a crash — kill, then the crash sequence runs
         plane.kill();
-        this.fx.groundBurst(plane.state.position, 2.2);
+        this._crashImpact();
         return;
       }
       // enemies: a hard prang kills, a graze just hurts
@@ -348,14 +381,22 @@ export default class Game {
         this.kills++;
         this.hud.setKills(this.kills);
         this.hud.banner('FOKKER DOWN');
+        this.fx.explosion(e.state.position, 1.8);
+        this.debris.burst(e.state.position, 14, { spread: 16, up: 10 });
         this.audio.explosion(1.5);
       }
     }
     for (const t of this.battlefield.targets) {
       if (!t.alive && !t._counted) {
         t._counted = true;
-        // balloons go up with a roar; bunkers/nests are a heavy ground blast
-        this.audio.explosion(t.type === 'balloon' ? 2.0 : 1.3);
+        if (t.type === 'balloon') {
+          // a fireball aloft, raining debris
+          this.fx.explosion(t.pos, 2.8);
+          this.debris.burst(t.pos, 18, { spread: 16, up: 6 });
+          this.audio.explosion(2.0);
+        } else {
+          this._groundExplosion(t.pos, t.type === 'bunker' ? 3.2 : 2.2);
+        }
       }
     }
   }
