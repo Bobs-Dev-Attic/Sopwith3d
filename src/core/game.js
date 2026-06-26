@@ -41,7 +41,10 @@ export default class Game {
       battlefield: this.battlefield,
       hud: this.hud,
       spawnEnemy: (p, h) => this._spawnEnemy(p, h),
+      game: this,
     });
+
+    this.peaceful = false;   // training sector: hostiles hold fire
 
     this.running = false;
     this._viewMode = 'chase';
@@ -80,7 +83,8 @@ export default class Game {
     if (this.plane.parts.head) this.plane.parts.head.visible = true;
     this.hud.setViewCaption('VIEW');
 
-    // apply assist options
+    // apply assist options (a mission's begin() may override, e.g. training)
+    this.peaceful = false;
     this.plane.flightAssist = settings.get('flightAssist');
     this.plane.unlimitedFuel = settings.get('unlimitedFuel');
     this.plane.damageScale = settings.get('reinforcedHull') ? 0.5 : 1;
@@ -123,8 +127,8 @@ export default class Game {
     p.setSteer(steerToward(p.state.quaternion, desired), Math.max(t, 0.3) * 0.9);
 
     const overBarrage = r - (WORLD.combatRadius + BARRAGE.start);
-    if (overBarrage <= 0) {
-      // warning band — just a nudge and a message
+    if (overBarrage <= 0 || this.peaceful) {
+      // warning band (or training) — just a nudge and a message, no barrage
       this._oobTimer -= dt;
       if (this._oobTimer <= 0) { this._oobTimer = 3.2; this.hud.banner('RETURN TO THE FRONT'); }
       return;
@@ -165,6 +169,7 @@ export default class Game {
 
   // Ambient flak over the battlefield — mostly atmospheric near-misses.
   _ambientFlak(dt) {
+    if (this.peaceful) return;
     const p = this.plane;
     const r = Math.hypot(p.state.position.x, p.state.position.z);
     if (r > WORLD.combatRadius || p.state.position.y < FLAK.minAlt) return;
@@ -269,6 +274,7 @@ export default class Game {
 
     // --- battlefield (nests track & shoot the player) ---
     this.battlefield.update(dt, this.plane, (mp, dir) => {
+      if (this.peaceful) return;            // training: nests hold fire
       this.projectiles.fire(mp, dir, 540, 'enemy', 7);
       this.audio.enemyGun(mp.distanceTo(this.plane.state.position));
     }, this.camera);
