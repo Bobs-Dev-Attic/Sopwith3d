@@ -370,7 +370,6 @@ html, body {
 .menu-list { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
 .menu-list .menu-btn { width: 100%; }
 .menu-version { margin-top: 28px; font-size: 11px; letter-spacing: 2px; color: var(--parchment-dim); }
-.menu-version::before { content: 'OFFLINE READY · '; color: var(--brass); }
 
 /* ranks / leaderboard */
 #ranks-list { display: flex; flex-direction: column; gap: 8px; max-width: 440px; margin: 0 auto 24px; }

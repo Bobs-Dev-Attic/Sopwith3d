@@ -11,10 +11,41 @@ import leaderboard from './core/leaderboard.js';
 const versionTag = document.getElementById('version-tag');
 if (versionTag) versionTag.textContent = `v${VERSION}`;
 
-// register the service worker for offline play (production build only)
+// --- PWA install / offline / update (modeled on the scrabble-offline app) ---
+let deferredPrompt = null;
+let swReg = null;
+let updateReady = false;
+let applyingUpdate = false;
+
+const isStandalone = () =>
+  (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+  window.navigator.standalone === true;
+const offlineReady = () => !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; });
+
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (applyingUpdate) window.location.reload();
+  });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+    // updateViaCache:'none' => the SW script is re-fetched from network on every
+    // check, so new deploys are detected promptly instead of being HTTP-cached.
+    navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' })
+      .then((reg) => {
+        swReg = reg;
+        if (reg.waiting && navigator.serviceWorker.controller) updateReady = true;
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) updateReady = true;
+          });
+        });
+        try { reg.update(); } catch (e) { /* ignore */ }
+      })
+      .catch(() => {});
   });
 }
 
@@ -134,7 +165,10 @@ function launch(index) { overlay.classList.add('hidden'); game.start(index); }
 
 // --- menu navigation --------------------------------------------------------
 const byId = (id) => document.getElementById(id);
-byId('menu-icon').addEventListener('click', () => { byId('menu-version').textContent = `v${VERSION}`; showScreen('menu-screen'); });
+byId('menu-icon').addEventListener('click', () => {
+  byId('menu-version').textContent = (offlineReady() ? 'OFFLINE READY ✓ · ' : '') + `v${VERSION}`;
+  showScreen('menu-screen');
+});
 byId('m-new').addEventListener('click', () => { highestUnlocked = 1; saveUnlocked(); showTitle(); });
 byId('m-options').addEventListener('click', () => { buildOptions(); showScreen('options-screen'); });
 byId('m-ranks').addEventListener('click', () => { buildRanks(); showScreen('ranks-screen'); });
@@ -145,27 +179,56 @@ byId('btn-options-back').addEventListener('click', () => showScreen('menu-screen
 byId('ranks-back').addEventListener('click', () => showScreen('menu-screen'));
 byId('howto-back').addEventListener('click', () => showScreen('menu-screen'));
 
-// --- PWA install / update ---------------------------------------------------
-let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+// --- Install / Update button ------------------------------------------------
+function applyUpdate(btn) {
+  if (swReg && swReg.waiting) {
+    btn.textContent = 'UPDATING…';
+    applyingUpdate = true;                 // controllerchange handler reloads
+    swReg.waiting.postMessage('SKIP_WAITING');
+    return true;
+  }
+  return false;
+}
+
 async function installOrUpdate(btn) {
   game.audio.unlock();
-  if (deferredPrompt) {
+
+  // 1) installable and not yet installed -> show the install prompt
+  if (deferredPrompt && !isStandalone()) {
     deferredPrompt.prompt();
-    try { const { outcome } = await deferredPrompt.userChoice; btn.textContent = outcome === 'accepted' ? 'INSTALLED ✓' : 'INSTALL / UPDATE'; }
-    catch (e) { /* ignore */ }
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+      btn.textContent = outcome === 'accepted' ? 'INSTALLED ✓' : 'INSTALL / UPDATE';
+    } catch (e) { /* ignore */ }
     deferredPrompt = null;
     return;
   }
-  // already installed / not promptable: pull the latest assets and reload
-  btn.textContent = 'UPDATING…';
+
+  if (!('serviceWorker' in navigator) || !swReg) {
+    btn.textContent = 'UNAVAILABLE';
+    setTimeout(() => { btn.textContent = 'INSTALL / UPDATE'; }, 1600);
+    return;
+  }
+
+  // 2) an update already downloaded and waiting -> apply it
+  if (updateReady && applyUpdate(btn)) return;
+
+  // 3) otherwise check the server for a new version
+  btn.textContent = 'CHECKING…';
   try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) await reg.update();
+    await swReg.update();
+    if (swReg.waiting && navigator.serviceWorker.controller) { applyUpdate(btn); return; }
+    const installing = swReg.installing;
+    if (installing) {
+      btn.textContent = 'UPDATING…';
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && navigator.serviceWorker.controller) applyUpdate(btn);
+      });
+      return;
     }
   } catch (e) { /* ignore */ }
-  setTimeout(() => location.reload(), 700);
+  btn.textContent = offlineReady() ? 'UP TO DATE ✓' : 'INSTALL / UPDATE';
+  setTimeout(() => { btn.textContent = 'INSTALL / UPDATE'; }, 1800);
 }
 
 // rank earned from the mission score
