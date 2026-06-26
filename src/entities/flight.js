@@ -36,8 +36,10 @@ export function integrateFlight(state, controls, params, dt) {
   // --- angular dynamics: apply body-axis rotations to the orientation ---
   const pitch = controls.pitch * params.pitchRate * authority * dt;
   const roll = controls.roll * params.rollRate * authority * dt;
-  // Coordinated turn: a bank pulls the nose around (right.y ~ sin(bankAngle)).
-  const bankYaw = -_right.y * params.yawFromRoll;
+  // Coordinated turn: a bank pulls the nose around the same way the tilted
+  // lift vector does (bank right => yaw right), so the turn is coordinated
+  // rather than fighting itself.
+  const bankYaw = _right.y * params.yawFromRoll;
   const yaw = (controls.yaw * params.yawRate + bankYaw) * authority * dt;
 
   if (pitch) { _q.setFromAxisAngle(_right, pitch); q.premultiply(_q); }

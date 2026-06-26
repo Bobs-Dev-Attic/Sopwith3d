@@ -45,7 +45,7 @@ function groundTexture() {
 
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(24, 24);
+  t.repeat.set(44, 44);
   t.anisotropy = 8;
   return t;
 }

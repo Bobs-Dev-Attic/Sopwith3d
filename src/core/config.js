@@ -2,14 +2,18 @@
 // scales them into period-flavoured ft / mph for readout only.
 
 export const WORLD = {
-  groundSize: 6000,       // battlefield extent (square)
+  groundSize: 11000,      // battlefield extent (square) — large open arena
   fogColor: 0x9a9488,     // hazy, overcast horizon
-  fogNear: 700,
-  fogFar: 4200,
+  fogNear: 900,
+  fogFar: 6200,
   skyTop: 0x3a3d42,       // bruised grey storm sky
   skyBottom: 0xb8b0a0,    // pale smoke-lit horizon
   gravity: 9.8,
   seaLevel: 0,
+  // soft patrol boundary: beyond `combatRadius` the plane is eased back toward
+  // the action (with a warning) rather than letting you fly off into the fog
+  combatRadius: 3000,
+  boundaryBand: 1400,     // how far past the radius the turn-back ramps to full
 };
 
 // Semi-realistic arcade flight model for the Sopwith Camel.
@@ -22,13 +26,22 @@ export const PLANE = {
   cruiseSpeed: 95,
   stallSpeed: 42,         // below this the wing lets go
   maxSpeed: 175,
-  // Control authority (radians/sec at full deflection)
-  pitchRate: 1.35,
-  rollRate: 2.5,
-  yawRate: 0.5,
-  yawFromRoll: 0.55,      // banked turns yaw the nose (coordinated turn)
+  // Control authority (radians/sec at full deflection) — gentled for a less
+  // twitchy feel; the expo curve in Plane.setStick softens small inputs further
+  pitchRate: 0.95,
+  rollRate: 1.7,
+  yawRate: 0.42,
+  yawFromRoll: 0.5,       // banked turns yaw the nose (coordinated turn)
   grip: 1.6,              // how hard velocity is dragged toward the nose
   rollReturn: 1.4,        // auto-levelling of roll when stick released
+  stickExpo: 1.7,         // >1 = gentler near centre, full at the edges
+  stickDeadzone: 0.06,
+  // bank-angle control: stick X holds a bank (auto-levels when centred) so
+  // turns are smooth and intuitive on a touchscreen instead of rate-rolling
+  maxBank: 1.0,           // radians at full stick (~57°)
+  rollGain: 2.2,          // how quickly we settle onto the commanded bank
+  coordYaw: 0.2,          // rudder mixed in with the bank
+  turnPull: 0.5,          // auto back-pressure per radian of bank (coordination)
   startThrottle: 0.7,
   startAltitude: 320,
   startSpeed: 95,
@@ -78,7 +91,7 @@ export const CAMERA = {
   defaultZoom: 0.26,      // closer than before by default
   stiffness: 3.4,         // position follow
   rotStiffness: 2.6,      // aim follow
-  fov: 62,
+  fov: 75,                // wider field of view
 };
 
 // Readout scaling — purely cosmetic flavour for the HUD.

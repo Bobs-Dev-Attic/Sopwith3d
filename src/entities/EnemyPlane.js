@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildFokker } from './models.js';
 import { integrateFlight, basisVectors } from './flight.js';
+import { steerToward } from './steering.js';
 import { ENEMY } from '../core/config.js';
 
 const _toTarget = new THREE.Vector3();
@@ -138,14 +139,9 @@ export default class EnemyPlane {
   }
 
   _steerToward(desiredDir) {
-    _inv.copy(this.state.quaternion).invert();
-    _local.copy(desiredDir).applyQuaternion(_inv); // target dir in body frame
-    // local.x > 0 => target to the right; local.y > 0 => target above; -z forward
-    const turn = THREE.MathUtils.clamp(_local.x * 2.6, -1, 1);
-    const climb = THREE.MathUtils.clamp(_local.y * 2.6, -1, 1);
-    this.controls.roll = turn;          // bank into the turn
-    this.controls.yaw = turn * 0.4;     // coordinate with rudder
-    this.controls.pitch = climb;
+    // coordinated bank-and-pull turn toward the target (shared with the
+    // player's patrol-boundary autopilot)
+    steerToward(this.state.quaternion, desiredDir, this.controls);
   }
 
   _emitDamage(dt) {
