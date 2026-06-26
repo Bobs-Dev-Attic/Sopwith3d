@@ -141,6 +141,17 @@ html, body {
   background: radial-gradient(circle at 50% 50%, rgba(140,30,20,0) 40%, rgba(150,20,12,0.55) 100%);
 }
 
+#cloud-veil {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(232,230,224,0.95), rgba(206,204,198,0.8));
+  transition: opacity 0.12s linear;
+}
+
+#barrage-veil {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(120,20,12,0) 35%, rgba(150,30,18,0.6) 100%);
+}
+
 #message-banner {
   position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%);
   font-size: 24px; letter-spacing: 4px; text-align: center; color: var(--parchment);

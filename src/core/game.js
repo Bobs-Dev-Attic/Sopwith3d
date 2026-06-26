@@ -11,7 +11,8 @@ import { steerToward } from '../entities/steering.js';
 import AudioManager from '../audio/sound.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
-import { PLANE, ENEMY, WORLD } from './config.js';
+import Clouds from '../world/clouds.js';
+import { PLANE, ENEMY, WORLD, FLAK, BARRAGE } from './config.js';
 
 export default class Game {
   constructor(renderer, scene, camera) {
@@ -22,6 +23,7 @@ export default class Game {
     this.fx = new ParticleSystem(scene);
     this.sky = setupSky(scene);
     this.terrain = buildTerrain(scene);
+    this.clouds = new Clouds(scene);
     this.battlefield = new Battlefield(scene, this.fx);
 
     this.plane = new Plane(scene, this.fx);
@@ -60,6 +62,11 @@ export default class Game {
     this._deathTimer = 0;
     this._fuelWarned = false;
     this._deathSoundPlayed = false;
+    this._flakTimer = FLAK.battlefieldInterval;
+    this._flakAcc = 0;
+    this._tracerAcc = 0;
+    this._barrageDmgAcc = 0;
+    this._oobTimer = 0;
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
@@ -82,22 +89,98 @@ export default class Game {
     this.missions.ctx.battlefield = this.battlefield;
   }
 
-  // Soft patrol boundary: ease the plane back toward the action when it strays
-  // beyond the combat radius, rather than letting it vanish into the fog.
-  _applyBoundary(dt) {
+  // Patrol boundary with teeth. Stray past the combat radius and you're eased
+  // back with a warning; desert far enough and the whole sky opens up with
+  // flak and ground fire while your fuel pours away — you will not make it out.
+  _enforceBoundary(dt) {
     const p = this.plane;
     const x = p.state.position.x, z = p.state.position.z;
     const r = Math.hypot(x, z);
+    this.hud.setBarrage(0);
     if (r < WORLD.combatRadius) { this._oobTimer = 0; return; }
+
+    // steer back toward the front (stronger the further out)
     const t = THREE.MathUtils.clamp((r - WORLD.combatRadius) / WORLD.boundaryBand, 0, 1);
     const desired = new THREE.Vector3(-x, 0, -z).normalize();
-    const steer = steerToward(p.state.quaternion, desired);
-    p.setSteer(steer, t * 0.9);   // blended over the player's input in update()
-    this._oobTimer = (this._oobTimer || 0) - dt;
-    if (this._oobTimer <= 0) {
-      this._oobTimer = 3.2;
-      this.hud.banner('RETURN TO THE FRONT');
+    p.setSteer(steerToward(p.state.quaternion, desired), Math.max(t, 0.3) * 0.9);
+
+    const overBarrage = r - (WORLD.combatRadius + BARRAGE.start);
+    if (overBarrage <= 0) {
+      // warning band — just a nudge and a message
+      this._oobTimer -= dt;
+      if (this._oobTimer <= 0) { this._oobTimer = 3.2; this.hud.banner('RETURN TO THE FRONT'); }
+      return;
     }
+
+    // --- deserter's barrage ---
+    const bt = THREE.MathUtils.clamp(overBarrage / BARRAGE.full, 0.25, 1);
+    this.hud.setBarrage(bt);
+
+    // fuel pours out — forces you down fast
+    p.fuel = Math.max(0, p.fuel - BARRAGE.fuelDrain * dt);
+
+    this._oobTimer -= dt;
+    if (this._oobTimer <= 0) { this._oobTimer = 2.4; this.hud.banner('TURN BACK — YOU WILL BE SHOT DOWN'); }
+
+    // fill the sky with bursting flak around the plane
+    this._flakAcc += BARRAGE.flakPerSec * bt * dt;
+    while (this._flakAcc >= 1) {
+      this._flakAcc -= 1;
+      this._burstFlakNear(p.state.position, 130, 0.45); // lethal-ish near the cockpit
+    }
+
+    // and streaking ground fire (real tracers that can hit)
+    this._tracerAcc += BARRAGE.tracersPerSec * bt * dt;
+    while (this._tracerAcc >= 1) {
+      this._tracerAcc -= 1;
+      this._spawnBarrageTracer(p.state.position);
+    }
+
+    // sustained ack-ack damage applied in small chunks
+    this._barrageDmgAcc += BARRAGE.damagePerSec * bt * dt;
+    if (this._barrageDmgAcc >= 6) {
+      this._barrageDmgAcc = 0;
+      p.takeDamage(6);
+      this.hud.flashHit();
+    }
+  }
+
+  // Ambient flak over the battlefield — mostly atmospheric near-misses.
+  _ambientFlak(dt) {
+    const p = this.plane;
+    const r = Math.hypot(p.state.position.x, p.state.position.z);
+    if (r > WORLD.combatRadius || p.state.position.y < FLAK.minAlt) return;
+    this._flakTimer -= dt;
+    if (this._flakTimer > 0) return;
+    this._flakTimer = FLAK.battlefieldInterval * (0.6 + Math.random() * 0.9);
+    this._burstFlakNear(p.state.position, 240, FLAK.ambientDamageChance);
+  }
+
+  _burstFlakNear(center, spread, dmgChance) {
+    const off = new THREE.Vector3(
+      (Math.random() - 0.5) * spread,
+      (Math.random() - 0.5) * spread * 0.5,
+      (Math.random() - 0.5) * spread
+    );
+    const pos = center.clone().add(off);
+    pos.y = Math.max(FLAK.minAlt * 0.5, pos.y);
+    const size = 0.9 + Math.random() * 0.8;
+    this.fx.flak(pos, size);
+    const dist = pos.distanceTo(this.plane.state.position);
+    this.audio.explosion(Math.max(0.3, 1.2 - dist / 300));
+    if (dist < FLAK.damageRadius && Math.random() < dmgChance) {
+      this.plane.takeDamage(FLAK.damage);
+      this.hud.flashHit();
+    }
+  }
+
+  _spawnBarrageTracer(target) {
+    // fire from a random point off to the side/below, aimed with a small miss
+    const dir = new THREE.Vector3(Math.random() - 0.5, -0.4 - Math.random() * 0.5, Math.random() - 0.5).normalize();
+    const origin = target.clone().addScaledVector(dir, -(320 + Math.random() * 220));
+    const miss = new THREE.Vector3((Math.random() - 0.5) * 22, (Math.random() - 0.5) * 22, (Math.random() - 0.5) * 22);
+    const aim = target.clone().add(miss).sub(origin).normalize();
+    this.projectiles.fire(origin, aim, 560, 'enemy', 8);
   }
 
   _spawnEnemy(pos, heading) {
@@ -122,6 +205,7 @@ export default class Game {
     // cosmetic systems run even on menus
     this.fx.update(dt);
     this.sky.update(dt, this.plane.state.position);
+    this.clouds.update(dt);
 
     if (!this.running) { this.renderer.render(this.scene, this.camera); return; }
 
@@ -132,7 +216,8 @@ export default class Game {
       this.plane.setStick(this.input.pitch, this.input.yaw);
       this.plane.setThrottle(this.input.throttle);
       this._handlePlayerWeapons(dt);
-      this._applyBoundary(dt);
+      this._enforceBoundary(dt);
+      this._ambientFlak(dt);
     }
     this.plane.update(dt);
     this._checkGround(this.plane, true);
@@ -159,25 +244,30 @@ export default class Game {
     const status = this.missions.update();
     if (status === 'won') return this._end(true);
 
-    // death handling
+    // --- game over: the Camel has crashed or been blown out of the sky ---
     if (!this.plane.alive) {
+      if (!this._deathSoundPlayed) {
+        this._deathSoundPlayed = true;
+        this.audio.explosion(2.2);
+        this.hud.banner('SHOT DOWN');
+      }
       this._deathTimer += dt;
-      if (this._deathTimer > 3) return this._end(false);
+      if (this._deathTimer > 2.6) return this._end(false);
     }
 
     if (this.plane.fuelOut && !this._fuelWarned) {
       this._fuelWarned = true;
       this.hud.banner('ENGINE OUT — GLIDE HER DOWN');
     }
-    if (!this.plane.alive && !this._deathSoundPlayed) {
-      this._deathSoundPlayed = true;
-      this.audio.explosion(2.2);
-    }
 
     this.audio.update(this.plane.rpm, this.plane.state.throttle, this.plane.state.speed, this.plane.alive);
     this.hud.update(dt, this.plane);
     this.chase.setZoom(this.input.cameraZoom);
     this.chase.follow(this.plane, dt);
+
+    // whiteout when the camera plunges into a cloud
+    this.hud.setCloudVeil(this.clouds.whiteoutAt(this.camera.position));
+
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -233,7 +323,13 @@ export default class Game {
     }
     if (plane.state.position.y <= 2) {
       plane.state.position.y = 2;
-      // a gentle skim is survivable-ish; a real prang kills
+      if (isPlayer) {
+        // hitting the deck in a fighter is a crash — game over
+        plane.kill();
+        this.fx.groundBurst(plane.state.position, 2.2);
+        return;
+      }
+      // enemies: a hard prang kills, a graze just hurts
       const vy = plane.state.velocity.y;
       if (vy < -8 || plane.state.speed > 70) {
         plane.kill();

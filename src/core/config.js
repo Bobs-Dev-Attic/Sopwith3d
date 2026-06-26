@@ -16,6 +16,36 @@ export const WORLD = {
   boundaryBand: 1400,     // how far past the radius the turn-back ramps to full
 };
 
+// Fly-through cloud field.
+export const CLOUDS = {
+  count: 30,
+  minAlt: 160,
+  maxAlt: 620,
+  spread: 5200,           // horizontal scatter radius
+  puffsPer: 9,
+  cloudRadius: 95,        // whiteout / fly-through radius
+  drift: 5,               // slow easterly drift
+};
+
+// Anti-aircraft flak.
+export const FLAK = {
+  battlefieldInterval: 2.2,  // seconds between ambient bursts over the lines
+  ambientDamageChance: 0.18, // a near miss occasionally stings
+  damageRadius: 26,
+  damage: 12,
+  minAlt: 110,
+};
+
+// What happens when you desert — flee well past the boundary.
+export const BARRAGE = {
+  start: 1400,            // metres beyond combatRadius where the barrage opens up
+  full: 1200,             // further out again => full intensity
+  fuelDrain: 26,          // %/sec fuel burned while deserting (forces you down)
+  flakPerSec: 5,
+  tracersPerSec: 14,
+  damagePerSec: 14,       // sustained ack-ack damage at full intensity
+};
+
 // Semi-realistic arcade flight model for the Sopwith Camel.
 export const PLANE = {
   maxThrust: 34,          // forward acceleration at full throttle
