@@ -1,6 +1,6 @@
 // Service worker for offline play. Bump CACHE on each release so clients
 // pick up new assets (old caches are purged on activate).
-const CACHE = 'sopwith-v0.7.0';
+const CACHE = 'sopwith-v0.8.0';
 const CORE = [
   './',
   './index.html',
