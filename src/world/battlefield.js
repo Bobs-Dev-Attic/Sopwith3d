@@ -68,6 +68,11 @@ export default class Battlefield {
 
     // dense atmospheric dressing (instanced + a few animated props)
     this.detail = new GroundDetail(this.root, this.rng, this.fx);
+
+    // some emplacements are already smoking from earlier shelling
+    for (const t of [...this.mgNests, ...this.bunkers]) {
+      if (this.rng() < 0.4) this.detail.addFire(t.pos.x + 3, t.pos.z + 2, 0.7);
+    }
   }
 
   get targets() {
@@ -145,11 +150,12 @@ export default class Battlefield {
   }
 
   _placeNests() {
-    // scatter machine-gun nests across the enemy frontage (varies per sortie)
+    // scatter machine-gun nests widely across the whole enemy frontage so the
+    // objectives are spread out and you have to range across the lines
     const count = 12 + Math.floor(this.rng() * 4);
     for (let i = 0; i < count; i++) {
-      const x = (this.rng() - 0.5) * 2800;
-      const z = -180 - this.rng() * 620;
+      const x = (this.rng() - 0.5) * 5200;
+      const z = -200 - this.rng() * 1700;
       this.mgNests.push(this._makeNest(x, z));
     }
   }
@@ -186,6 +192,7 @@ export default class Battlefield {
     t.onDestroyed = () => {
       mount.visible = false;
       ring.material = M.sandbagDark;
+      if (this.detail) this.detail.addFire(t.pos.x, t.pos.z, 1.1);
     };
     return t;
   }
@@ -245,6 +252,7 @@ export default class Battlefield {
         body.material = M.bark;
         roof.rotation.z = 0.3;
         roof.position.y = 4.5;
+        if (this.detail) this.detail.addFire(t.pos.x, t.pos.z, 1.4);
       };
       this.bunkers.push(t);
     }
@@ -335,10 +343,13 @@ export default class Battlefield {
 
   update(dt, player, fireCb, camera) {
     if (this.detail) this.detail.update(dt, this.fx);
+    this._markerT = (this._markerT || 0) + dt;
+    const pulse = 0.25 + 0.4 * (0.5 + 0.5 * Math.sin(this._markerT * 3.2));
     for (const t of this.targets) {
       if (t.update) t.update(dt, player, fireCb);
       if (t._marker && t._marker.visible && camera) {
         t._marker.lookAt(camera.position.x, t._marker.position.y, camera.position.z);
+        t._marker.material.opacity = pulse;  // fade in and out
       }
     }
   }

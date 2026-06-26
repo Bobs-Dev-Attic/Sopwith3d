@@ -141,6 +141,19 @@ html, body {
   background: radial-gradient(circle at 50% 50%, rgba(140,30,20,0) 40%, rgba(150,20,12,0.55) 100%);
 }
 
+#target-arrows { position: absolute; inset: 0; pointer-events: none; }
+.target-arrow {
+  position: absolute; width: 0; height: 0;
+  border-top: 10px solid transparent; border-bottom: 10px solid transparent;
+  border-left: 18px solid rgba(232,196,106,0.92);
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
+  transform-origin: center; will-change: left, top, transform;
+}
+.target-arrow .arrow-dist {
+  position: absolute; left: -34px; top: -7px; width: 30px; text-align: right;
+  font-size: 9px; color: var(--brass); text-shadow: 0 1px 2px #000;
+}
+
 #cloud-veil {
   position: absolute; inset: 0; pointer-events: none; opacity: 0;
   background: radial-gradient(circle at 50% 45%, rgba(232,230,224,0.95), rgba(206,204,198,0.8));

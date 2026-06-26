@@ -303,6 +303,9 @@ export default class Game {
     // whiteout when the camera plunges into a cloud
     this.hud.setCloudVeil(this.clouds.whiteoutAt(this.camera.position));
 
+    // arrows pointing to off-screen objectives
+    this.hud.updateArrows(this.missions.marks(), this.camera);
+
     this.renderer.render(this.scene, this.camera);
   }
 
