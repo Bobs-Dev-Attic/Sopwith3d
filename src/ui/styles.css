@@ -322,6 +322,31 @@ html, body {
   text-shadow: 0 1px 2px #000; transition: transform 0.1s, background 0.1s;
 }
 .menu-btn:active { transform: scale(0.96); }
+.menu-btn-sm { padding: 10px 22px; font-size: 12px; margin-top: 18px; }
+
+/* Options / assists screen */
+.options-title { font-size: clamp(28px,9vw,46px); letter-spacing: 5px; color: var(--parchment); text-shadow: 0 3px 0 #000; }
+.options-sub { color: var(--brass); letter-spacing: 4px; font-size: 12px; margin: 8px 0 22px; }
+#options-list { display: flex; flex-direction: column; gap: 10px; max-width: 440px; margin: 0 auto 24px; }
+.option-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 12px 14px; text-align: left;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+}
+.option-name { font-size: 15px; color: var(--parchment); }
+.option-desc { font-size: 11px; color: var(--parchment-dim); margin-top: 3px; line-height: 1.35; }
+.option-toggle {
+  pointer-events: auto; cursor: pointer; flex: 0 0 auto;
+  width: 58px; height: 30px; border-radius: 16px; position: relative;
+  background: rgba(20,18,14,0.85); border: 1px solid var(--panel-edge);
+  transition: background 0.15s, border-color 0.15s;
+}
+.option-toggle .knob {
+  position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%;
+  background: #6a6253; transition: left 0.15s, background 0.15s;
+}
+.option-toggle.on { background: rgba(124,139,74,0.45); border-color: #7c8b4a; }
+.option-toggle.on .knob { left: 30px; background: var(--brass); }
 
 /* Loader */
 .loader-ring {

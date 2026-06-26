@@ -37,6 +37,12 @@ export default class Plane {
     this._steerOverride = null;
     this.params = PLANE;
 
+    // assist options (set from settings each sortie)
+    this.flightAssist = false;
+    this.unlimitedFuel = false;
+    this.damageScale = 1;
+    this._fwd = new THREE.Vector3();
+
     this.hull = PLANE.hull;
     this.maxHull = PLANE.hull;
     this.alive = true;
@@ -95,7 +101,14 @@ export default class Plane {
     // automatic back-pressure scaled to how steeply we're banked — holds the
     // nose up through a turn so it stays coordinated instead of spiralling down
     const turnPull = Math.abs(bank) * PLANE.turnPull;
-    this.controls.pitch = THREE.MathUtils.clamp(this._pitchInput + turnPull, -1, 1);
+    let pitch = this._pitchInput + turnPull;
+    // Flight Assist: with the stick near centre, gently bring the nose back to
+    // the horizon so the plane settles into level flight on its own.
+    if (this.flightAssist && Math.abs(this._pitchInput) < 0.12 && Math.abs(this._bankInput) < 0.25) {
+      this._fwd.set(0, 0, -1).applyQuaternion(this.state.quaternion);
+      pitch += THREE.MathUtils.clamp(-this._fwd.y * 1.6, -0.5, 0.5);
+    }
+    this.controls.pitch = THREE.MathUtils.clamp(pitch, -1, 1);
     this.controls.yaw = this._bankInput * PLANE.coordYaw;
 
     if (this._steerOverride) {
@@ -127,6 +140,13 @@ export default class Plane {
   }
 
   _burnFuel(dt) {
+    if (this.unlimitedFuel) {
+      this.fuel = this.maxFuel;
+      this.fuelOut = false;
+      this.state.throttle = this.commandedThrottle;
+      this.rpm = THREE.MathUtils.lerp(PLANE.rpmIdle, PLANE.rpmMax, this.commandedThrottle);
+      return;
+    }
     if (this.fuel > 0) {
       const burn = (PLANE.fuelBurnIdle +
         this.commandedThrottle * (PLANE.fuelBurnFull - PLANE.fuelBurnIdle)) * dt;
@@ -195,7 +215,7 @@ export default class Plane {
 
   takeDamage(amount) {
     if (!this.alive) return;
-    this.hull = Math.max(0, this.hull - amount);
+    this.hull = Math.max(0, this.hull - amount * this.damageScale);
     if (this.hull <= 0) this.kill();
   }
 

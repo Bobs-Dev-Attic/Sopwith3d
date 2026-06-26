@@ -4,6 +4,7 @@ import Input from './controls/input.js';
 import { CAMERA } from './core/config.js';
 import { MISSIONS } from './ui/missions.js';
 import { VERSION } from './core/version.js';
+import settings, { OPTION_DEFS } from './core/settings.js';
 
 // stamp the version on the home screen
 const versionTag = document.getElementById('version-tag');
@@ -57,8 +58,41 @@ soundBtn.addEventListener('click', (e) => {
 const overlay = document.getElementById('overlay');
 const titleScreen = document.getElementById('title-screen');
 const endScreen = document.getElementById('end-screen');
+const optionsScreen = document.getElementById('options-screen');
 const loading = document.getElementById('loading');
 let highestUnlocked = 0;
+
+// --- options / assists ------------------------------------------------------
+function buildOptions() {
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  OPTION_DEFS.forEach((opt) => {
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.innerHTML = `
+      <div class="option-info">
+        <div class="option-name">${opt.name}</div>
+        <div class="option-desc">${opt.desc}</div>
+      </div>
+      <div class="option-toggle${settings.get(opt.key) ? ' on' : ''}" role="switch"><div class="knob"></div></div>`;
+    const toggle = row.querySelector('.option-toggle');
+    toggle.addEventListener('click', () => {
+      const on = settings.toggle(opt.key);
+      toggle.classList.toggle('on', on);
+      game.audio.unlock();
+    });
+    list.appendChild(row);
+  });
+}
+document.getElementById('btn-options').addEventListener('click', () => {
+  buildOptions();
+  titleScreen.classList.add('hidden');
+  optionsScreen.classList.remove('hidden');
+});
+document.getElementById('btn-options-back').addEventListener('click', () => {
+  optionsScreen.classList.add('hidden');
+  titleScreen.classList.remove('hidden');
+});
 
 function buildMissionList() {
   const list = document.getElementById('mission-list');
@@ -83,12 +117,14 @@ function showTitle() {
   overlay.classList.remove('hidden');
   titleScreen.classList.remove('hidden');
   endScreen.classList.add('hidden');
+  optionsScreen.classList.add('hidden');
 }
 
 function launch(index) {
   overlay.classList.add('hidden');
   titleScreen.classList.add('hidden');
   endScreen.classList.add('hidden');
+  optionsScreen.classList.add('hidden');
   game.start(index);
 }
 

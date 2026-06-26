@@ -10,6 +10,7 @@ import { Projectiles, Bombs } from '../entities/weapons.js';
 import ChaseCamera from './chaseCamera.js';
 import { steerToward } from '../entities/steering.js';
 import AudioManager from '../audio/sound.js';
+import settings from './settings.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
 import Clouds from '../world/clouds.js';
@@ -75,6 +76,12 @@ export default class Game {
     this._crashed = false;
     this._postCrash = 0;
 
+    // apply assist options
+    this.plane.flightAssist = settings.get('flightAssist');
+    this.plane.unlimitedFuel = settings.get('unlimitedFuel');
+    this.plane.damageScale = settings.get('reinforcedHull') ? 0.5 : 1;
+    this.aimAssist = settings.get('aimAssist');
+
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
     this.hud.show();
@@ -123,8 +130,8 @@ export default class Game {
     const bt = THREE.MathUtils.clamp(overBarrage / BARRAGE.full, 0.25, 1);
     this.hud.setBarrage(bt);
 
-    // fuel pours out — forces you down fast
-    p.fuel = Math.max(0, p.fuel - BARRAGE.fuelDrain * dt);
+    // fuel pours out — forces you down fast (unless you've got infinite fuel)
+    if (!p.unlimitedFuel) p.fuel = Math.max(0, p.fuel - BARRAGE.fuelDrain * dt);
 
     this._oobTimer -= dt;
     if (this._oobTimer <= 0) { this._oobTimer = 2.4; this.hud.banner('TURN BACK — YOU WILL BE SHOT DOWN'); }
@@ -316,11 +323,12 @@ export default class Game {
       this._gunTimer = 60 / PLANE.gunRpm;
       this.plane.group.updateMatrixWorld();
       const { pos, dir } = this.plane.worldMuzzle();
+      const aim = this.aimAssist ? this._assistedAim(pos, dir) : dir;
       // twin Vickers: fire from each side of the cowl
       for (const off of [-0.3, 0.3]) {
         const p = pos.clone();
         p.x += off;
-        this.projectiles.fire(p, dir, PLANE.muzzleSpeed, 'player', PLANE.gunDamage);
+        this.projectiles.fire(p, aim, PLANE.muzzleSpeed, 'player', PLANE.gunDamage);
       }
       this.audio.gun(0.5);
     }
@@ -330,6 +338,26 @@ export default class Game {
       const belly = this.plane.state.position.clone().add(new THREE.Vector3(0, -1.2, 0));
       this.bombs.drop(belly, this.plane.state.velocity);
     }
+  }
+
+  // Aim Assist: bend the burst onto the nearest target inside a forward cone,
+  // leading moving aircraft so shots actually connect.
+  _assistedAim(muzzle, forward) {
+    const cosCone = Math.cos(0.3);   // ~17° half-angle
+    const maxRange = 1050;
+    let best = null, bestDot = cosCone;
+    const consider = (pos, vel) => {
+      const to = pos.clone().sub(muzzle);
+      const dist = to.length();
+      if (dist < 1 || dist > maxRange) return;
+      if (vel) to.addScaledVector(vel, dist / PLANE.muzzleSpeed); // lead
+      to.normalize();
+      const dot = to.dot(forward);
+      if (dot > bestDot) { bestDot = dot; best = to.clone(); }
+    };
+    for (const e of this.enemies) if (e.alive) consider(e.state.position, e.state.velocity);
+    for (const t of this.battlefield.targets) if (t.alive) consider(t.pos, null);
+    return best ? forward.clone().lerp(best, 0.95).normalize() : forward;
   }
 
   _buildColliders() {
