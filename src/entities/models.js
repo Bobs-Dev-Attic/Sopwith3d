@@ -103,6 +103,27 @@ export function buildCamel() {
   head.position.set(0, 1.05, 0.7);
   g.add(head);
 
+  // cockpit coaming + windscreen (frames the first-person view)
+  const coaming = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.16, 0.5), mat(0x241f16));
+  coaming.position.set(0, 0.92, -0.05);
+  g.add(coaming);
+  const wsFrame = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.06, 0.06), mat(0x15110b));
+  wsFrame.position.set(0, 1.2, -0.32);
+  g.add(wsFrame);
+  for (const sx of [-0.46, 0.46]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), mat(0x15110b));
+    post.position.set(sx, 1.04, -0.28);
+    post.rotation.x = -0.3;
+    g.add(post);
+  }
+  const glass = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.86, 0.32),
+    new THREE.MeshStandardMaterial({ color: 0xb6ccd2, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
+  );
+  glass.position.set(0, 1.04, -0.3);
+  glass.rotation.x = -0.3;
+  g.add(glass);
+
   // Biplane wings
   const wingGeo = new THREE.BoxGeometry(13.5, 0.18, 2.4);
   const upper = new THREE.Mesh(wingGeo, linen);
@@ -195,6 +216,7 @@ export function buildCamel() {
     rudder,
     aileronL,
     aileronR,
+    head,
     // muzzle in local space (nose, between guns)
     muzzle: new THREE.Vector3(0, 0.55, -3.2),
   };

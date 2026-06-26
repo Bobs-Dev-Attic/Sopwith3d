@@ -59,6 +59,8 @@ export default class HUD {
       banner: document.getElementById('message-banner'),
       cloudVeil: document.getElementById('cloud-veil'),
       barrageVeil: document.getElementById('barrage-veil'),
+      viewFade: document.getElementById('view-fade'),
+      viewCaption: document.getElementById('view-caption'),
     };
     this._flash = 0;
     this._buildInstruments();
@@ -142,6 +144,14 @@ export default class HUD {
   setObjective(text) { this.el.objective.textContent = text; }
   setCloudVeil(v) { this.el.cloudVeil.style.opacity = (v * 0.7).toFixed(2); }
   setBarrage(v) { this.el.barrageVeil.style.opacity = (v * 0.7).toFixed(2); }
+  setViewCaption(text) { if (this.el.viewCaption) this.el.viewCaption.textContent = text; }
+  flashViewFade() {
+    const f = this.el.viewFade;
+    if (!f) return;
+    f.style.animation = 'none';
+    void f.offsetWidth;
+    f.style.animation = 'viewfade 0.32s ease';
+  }
 
   flashHit() { this._flash = 0.4; }
 
