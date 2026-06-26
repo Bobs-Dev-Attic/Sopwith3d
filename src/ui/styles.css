@@ -286,7 +286,21 @@ html, body {
 #end-title { font-size: clamp(26px,8vw,44px); letter-spacing: 4px; margin-bottom: 16px; }
 #end-title.win { color: #9bb04a; text-shadow: 0 0 16px rgba(155,176,74,0.4); }
 #end-title.lose { color: #c0453a; text-shadow: 0 0 16px rgba(192,69,58,0.4); }
-#end-summary { font-size: 14px; color: var(--parchment-dim); line-height: 1.8; margin-bottom: 26px; }
+#end-summary { font-size: 14px; color: var(--parchment-dim); line-height: 1.6; margin-bottom: 26px; }
+.end-flavour { margin-bottom: 16px; color: var(--parchment); }
+.end-row {
+  display: flex; justify-content: space-between; max-width: 280px; margin: 4px auto;
+  padding: 3px 0; border-bottom: 1px dotted rgba(168,156,128,0.3);
+}
+.end-row span:first-child { color: var(--parchment-dim); letter-spacing: 1px; }
+.end-row span:last-child { color: var(--parchment); font-weight: bold; }
+.end-score {
+  display: flex; justify-content: space-between; max-width: 280px; margin: 14px auto 0;
+  padding-top: 8px; font-size: 20px; letter-spacing: 2px;
+}
+.end-score span:first-child { color: var(--brass); }
+.end-score span:last-child { color: var(--parchment); font-weight: bold; text-shadow: 0 0 10px rgba(232,196,106,0.4); }
+.end-unlock { margin-top: 16px; color: #9bb04a; letter-spacing: 3px; font-size: 12px; }
 
 .menu-btn {
   pointer-events: auto; cursor: pointer; font-family: inherit;

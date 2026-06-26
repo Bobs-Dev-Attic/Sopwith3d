@@ -60,7 +60,10 @@ export default class Game {
     this.plane.reset(new THREE.Vector3(0, PLANE.startAltitude, 900), 0);
     this.chase.snap();
     this.kills = 0;
+    this.groundKills = 0;
+    this.score = 0;
     this.hud.setKills(0);
+    this.hud.setScore(0);
     this._deathTimer = 0;
     this._fuelWarned = false;
     this._deathSoundPlayed = false;
@@ -379,8 +382,9 @@ export default class Game {
       if (!e.alive && !e._counted) {
         e._counted = true;
         this.kills++;
+        this._award(100);
         this.hud.setKills(this.kills);
-        this.hud.banner('FOKKER DOWN');
+        this.hud.banner('FOKKER DOWN  +100');
         this.fx.explosion(e.state.position, 1.8);
         this.debris.burst(e.state.position, 14, { spread: 16, up: 10 });
         this.audio.explosion(1.5);
@@ -389,6 +393,9 @@ export default class Game {
     for (const t of this.battlefield.targets) {
       if (!t.alive && !t._counted) {
         t._counted = true;
+        this.groundKills++;
+        const pts = t.type === 'balloon' ? 75 : t.type === 'bunker' ? 60 : 40;
+        this._award(pts);
         if (t.type === 'balloon') {
           // a fireball aloft, raining debris
           this.fx.explosion(t.pos, 2.8);
@@ -401,13 +408,23 @@ export default class Game {
     }
   }
 
+  _award(points) {
+    this.score += points;
+    this.hud.setScore(this.score);
+  }
+
   _end(win) {
     this.running = false;
     this.hud.hide();
     this.audio.endMission();
+    const bonus = win ? 500 : 0;
+    if (win) this._award(bonus);
     if (this.onMissionEnd) {
       this.onMissionEnd(win, {
         kills: this.kills,
+        groundKills: this.groundKills,
+        bonus,
+        score: this.score,
         missionIndex: this.missions.index,
       });
     }
