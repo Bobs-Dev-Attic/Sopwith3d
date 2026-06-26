@@ -21,12 +21,19 @@
         <div id="objective" class="hud-panel">
           <div class="objective-title">MISSION</div>
           <div class="objective-text">—</div>
+          <div class="kills-line">CONFIRMED <span id="kills-val">0</span></div>
         </div>
-        <div id="stats" class="hud-panel">
-          <div class="stat"><span class="stat-label">ALT</span><span id="alt-val">0</span><span class="stat-unit">ft</span></div>
-          <div class="stat"><span class="stat-label">SPD</span><span id="spd-val">0</span><span class="stat-unit">mph</span></div>
-          <div class="stat"><span class="stat-label">KILLS</span><span id="kills-val">0</span></div>
+        <!-- brass instrument cluster, built by hud.js -->
+        <div id="instruments"></div>
+      </div>
+
+      <!-- chase-camera distance -->
+      <div id="zoom-zone">
+        <div id="zoom-track">
+          <div id="zoom-fill"></div>
+          <div id="zoom-knob"></div>
         </div>
+        <div class="control-caption">VIEW</div>
       </div>
 
       <div id="gunsight">

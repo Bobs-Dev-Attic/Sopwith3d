@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CAMERA } from '../core/config.js';
 
 // Touch-first controls with a keyboard fallback so the sim is playable on a
 // desktop too. Exposes a simple polled state the game reads each frame.
@@ -7,14 +8,52 @@ export default class Input {
     this.pitch = 0;      // -1 nose down .. +1 nose up
     this.yaw = 0;        // -1 left .. +1 right (bank)
     this.throttle = 0.7;
+    this.cameraZoom = CAMERA.defaultZoom; // 0 = tight chase, 1 = high & far
     this.firing = false;
     this.bombQueued = false;
 
     this._keys = {};
     this._bindStick();
     this._bindThrottle();
+    this._bindZoom();
     this._bindButtons();
     this._bindKeyboard();
+  }
+
+  _bindZoom() {
+    const track = document.getElementById('zoom-track');
+    const fill = document.getElementById('zoom-fill');
+    const knob = document.getElementById('zoom-knob');
+    if (!track) return;
+    let active = false, id = null;
+    const apply = (t) => {
+      t = THREE.MathUtils.clamp(t, 0, 1);
+      this.cameraZoom = t;
+      fill.style.height = `${t * 100}%`;
+      knob.style.bottom = `calc(${t * 100}% - 11px)`;
+    };
+    this._applyZoom = apply;
+    apply(this.cameraZoom);
+    const fromY = (cy) => {
+      const r = track.getBoundingClientRect();
+      if (r.height <= 0) return;
+      apply(1 - (cy - r.top) / r.height);
+    };
+    track.addEventListener('pointerdown', (e) => {
+      active = true; id = e.pointerId; track.setPointerCapture(id);
+      fromY(e.clientY); e.preventDefault();
+    });
+    track.addEventListener('pointermove', (e) => {
+      if (active && e.pointerId === id) fromY(e.clientY);
+    });
+    const end = () => { active = false; id = null; };
+    track.addEventListener('pointerup', end);
+    track.addEventListener('pointercancel', end);
+
+    // desktop: mouse wheel to dolly the camera
+    window.addEventListener('wheel', (e) => {
+      apply(this.cameraZoom + Math.sign(e.deltaY) * 0.06);
+    }, { passive: true });
   }
 
   _bindStick() {
@@ -123,6 +162,8 @@ export default class Input {
     if (p || y) { this.pitch = p; this.yaw = y; }
     if (k.ShiftLeft || k.Equal) this.setThrottle(this.throttle + dt * 0.6);
     if (k.ControlLeft || k.Minus) this.setThrottle(this.throttle - dt * 0.6);
+    if (k.BracketLeft && this._applyZoom) this._applyZoom(this.cameraZoom - dt * 0.5);
+    if (k.BracketRight && this._applyZoom) this._applyZoom(this.cameraZoom + dt * 0.5);
   }
 
   setThrottle(t) {
