@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import GroundDetail from './groundDetail.js';
 
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, ...o });
 
@@ -64,6 +65,9 @@ export default class Battlefield {
     this._placeNests();
     this._placeBunkers();
     this._placeBalloons();
+
+    // dense atmospheric dressing (instanced + a few animated props)
+    this.detail = new GroundDetail(this.root, this.rng, this.fx);
   }
 
   get targets() {
@@ -321,6 +325,7 @@ export default class Battlefield {
   }
 
   dispose() {
+    if (this.detail) this.detail.dispose();
     this.scene.remove(this.root);
     this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
     for (const t of this.targets) {
@@ -332,6 +337,7 @@ export default class Battlefield {
   }
 
   update(dt, player, fireCb, camera) {
+    if (this.detail) this.detail.update(dt, this.fx);
     for (const t of this.targets) {
       if (t.update) t.update(dt, player, fireCb);
       if (t._marker && t._marker.visible && camera) {
