@@ -164,16 +164,24 @@ export default class Plane {
   }
 
   _animateSurfaces(dt) {
-    // ease toward target deflection so the flaps don't snap
+    // Control surfaces deflect with the stick: elevator with pitch, rudder
+    // swings with the bank/turn, ailerons split with roll. Eased so they don't
+    // snap, with a healthy throw so the movement reads clearly.
     const s = this._surfaces;
-    const k = Math.min(1, dt * 10);
-    s.pitch += (this.controls.pitch - s.pitch) * k;
-    s.roll += (this.controls.roll - s.roll) * k;
-    s.yaw += (this.controls.yaw - s.yaw) * k;
-    this.parts.elevator.rotation.x = s.pitch * 0.45;
-    this.parts.rudder.rotation.y = (s.yaw + s.roll * 0.25) * 0.5;
-    this.parts.aileronL.rotation.x = s.roll * 0.5;
-    this.parts.aileronR.rotation.x = -s.roll * 0.5;
+    const k = Math.min(1, dt * 12);
+    const pitchT = this.controls.pitch;
+    const rollT = this.controls.roll;
+    const yawT = this.controls.yaw + this._bankInput * 0.6; // rudder follows the turn
+    // ailerons reflect the stick you're holding (not just the roll-rate
+    // command, which centres at a steady bank) so they read your intent
+    const aileronT = THREE.MathUtils.clamp(this._bankInput * 0.8 + rollT, -1, 1);
+    s.pitch += (pitchT - s.pitch) * k;
+    s.roll += (aileronT - s.roll) * k;
+    s.yaw += (yawT - s.yaw) * k;
+    this.parts.elevator.rotation.x = THREE.MathUtils.clamp(s.pitch, -1, 1) * 0.6;
+    this.parts.rudder.rotation.y = THREE.MathUtils.clamp(s.yaw, -1, 1) * 0.65;
+    this.parts.aileronL.rotation.x = s.roll * 0.6;
+    this.parts.aileronR.rotation.x = -s.roll * 0.6;
   }
 
   _spinProp(dt) {
