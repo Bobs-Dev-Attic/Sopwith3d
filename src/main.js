@@ -3,6 +3,18 @@ import Game from './core/game.js';
 import Input from './controls/input.js';
 import { CAMERA } from './core/config.js';
 import { MISSIONS } from './ui/missions.js';
+import { VERSION } from './core/version.js';
+
+// stamp the version on the home screen
+const versionTag = document.getElementById('version-tag');
+if (versionTag) versionTag.textContent = `v${VERSION}`;
+
+// register the service worker for offline play (production build only)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+  });
+}
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
