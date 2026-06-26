@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { HUD_SCALE } from '../core/config.js';
+import Minimap from './minimap.js';
 
 // Sweep of a 270° dial face with evenly spaced tick marks.
 function faceSVG(majorTicks) {
@@ -68,6 +69,12 @@ export default class HUD {
     this._arrowHost = document.getElementById('target-arrows');
     this._arrows = [];
     this._proj = new THREE.Vector3();
+
+    this.minimap = new Minimap(document.getElementById('minimap'));
+  }
+
+  updateMinimap(dt, plane, enemies, groundTargets, objectives) {
+    this.minimap.update(dt, plane.state.position, plane.state.quaternion, enemies, groundTargets, objectives);
   }
 
   // Edge arrows pointing toward off-screen objective positions.

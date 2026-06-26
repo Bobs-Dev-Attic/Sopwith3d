@@ -325,6 +325,8 @@ export default class Game {
 
     // arrows pointing to off-screen objectives
     this.hud.updateArrows(this.missions.marks(), this.camera);
+    // radar / minimap
+    this.hud.updateMinimap(dt, this.plane, this.enemies, this.battlefield.targets, this.missions.marks());
 
     this.renderer.render(this.scene, this.camera);
   }
