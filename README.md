@@ -51,8 +51,19 @@ turns, pull up to avoid the dirt, and only fire when the nose is on target.
 2. **Trench Buster** — flatten two fortified bunkers with bombs.
 3. **Dawn Patrol** — shoot down three Fokker triplanes.
 
-Missions unlock in sequence. Get shot down (or prang into the ground) and it's
-back to the hangar.
+Missions unlock in sequence. Get shot down — or prang into the ground — and the
+sortie is over.
+
+## Weather & hazards
+
+- **Clouds you can fly through** — drifting puffy cloud banks scattered across
+  the airspace; plunge into one and the screen whites out until you punch back
+  through.
+- **Flak** — anti-aircraft fire bursts in black puffs over the lines; a near
+  miss will rattle your hull.
+- **Don't desert.** Stray past the patrol boundary and you're warned and eased
+  back; push on regardless and the whole sky erupts with flak and ground fire
+  while your fuel pours away — you will not make it out alive.
 
 ## What's animated
 

@@ -55,6 +55,8 @@ export default class HUD {
       stall: document.getElementById('stall-warning'),
       flash: document.getElementById('hit-flash'),
       banner: document.getElementById('message-banner'),
+      cloudVeil: document.getElementById('cloud-veil'),
+      barrageVeil: document.getElementById('barrage-veil'),
     };
     this._flash = 0;
     this._buildInstruments();
@@ -95,6 +97,8 @@ export default class HUD {
 
   setKills(n) { this.el.kills.textContent = n; }
   setObjective(text) { this.el.objective.textContent = text; }
+  setCloudVeil(v) { this.el.cloudVeil.style.opacity = (v * 0.7).toFixed(2); }
+  setBarrage(v) { this.el.barrageVeil.style.opacity = (v * 0.7).toFixed(2); }
 
   flashHit() { this._flash = 0.4; }
 

@@ -123,6 +123,24 @@ export default class ParticleSystem {
     this.explosion(pos, scale * 0.7);
   }
 
+  // anti-aircraft flak: a sharp flash, a lingering oily black puff, and sparks
+  flak(pos, size = 1) {
+    this._spawn(pos, {
+      tex: this.fireTex, additive: true, size: 5 * size, maxLife: 0.13, grow: 12, opacity: 1,
+    });
+    for (let i = 0; i < 5; i++) {
+      const off = new THREE.Vector3((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 10);
+      this._spawn(pos.clone().add(off), {
+        tex: this.smokeTex, size: 6 * size, maxLife: 2.6 + Math.random(), grow: 7, rise: 1.5,
+        color: 0x14130e, opacity: 0.92,
+      });
+    }
+    for (let i = 0; i < 6; i++) {
+      const v = new THREE.Vector3((Math.random() - 0.5) * 36, (Math.random() - 0.5) * 36, (Math.random() - 0.5) * 36);
+      this._spawn(pos, { tex: this.fireTex, additive: true, size: 1.6, maxLife: 0.3, grow: 2, vel: v, opacity: 0.9 });
+    }
+  }
+
   muzzleFlash(pos) {
     this._spawn(pos, {
       tex: this.fireTex, additive: true, size: 2.2, maxLife: 0.06,
