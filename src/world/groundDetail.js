@@ -101,8 +101,9 @@ export default class GroundDetail {
   _craters() {
     const geo = new THREE.CircleGeometry(1, 12);
     geo.rotateX(-Math.PI / 2);
-    const list = this._scatter(90, (r) => (r - 0.5) * 7000, (r) => (r - 0.5) * 3000,
-      (r) => 8 + r * 22);
+    // dense cratering, heaviest through the churned central ground
+    const list = this._scatter(190, (r) => (r - 0.5) * 8000, (r) => (r - 0.5) * 3400,
+      (r) => 6 + r * 26);
     list.forEach((it) => { it.p.y = 0.15; });
     this._instanced(geo, this._M(0x1d190f, { roughness: 1 }), list, { cast: false });
   }
@@ -310,33 +311,45 @@ export default class GroundDetail {
   // ---- smouldering fires (smoke columns) ----
   _fires() {
     this._smokeTex = smokeTexture(); this._textures.push(this._smokeTex);
-    // a few standalone fires plus the ones flagged on ruins
-    for (let i = 0; i < 8; i++) {
-      this._anim.fires.push({ x: (this.rng() - 0.5) * 7000, z: (this.rng() - 0.5) * 3500 });
+    // lots of standalone fires across the field (ruins add more on top)
+    for (let i = 0; i < 18; i++) {
+      this.addFire((this.rng() - 0.5) * 8000, (this.rng() - 0.5) * 3800, 0.8 + this.rng() * 0.7);
     }
-    for (const f of this._anim.fires) {
-      f.sprites = [];
-      const n = 4;
-      for (let i = 0; i < n; i++) {
-        const s = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: this._smokeTex, transparent: true, depthWrite: false, opacity: 0.5,
-          color: 0x2a2824,
-        }));
-        const sc = 3 + i * 2.5;
-        s.scale.set(sc, sc, 1);
-        s.position.set(f.x, i * 4, f.z);
-        s.userData = { base: i * 4, phase: i / n };
-        this.root.add(s);
-        f.sprites.push(s);
-      }
-      // faint ember glow at the base
-      const ember = new THREE.Sprite(new THREE.SpriteMaterial({
+    // ruins flagged fires built earlier
+    const pending = this._anim.fires.filter((f) => !f.sprites);
+    for (const f of pending) this._buildFire(f, 1);
+  }
+
+  // public: start a smoke column anywhere (smouldering wrecks, hit emplacements)
+  addFire(x, z, scale = 1) {
+    const f = { x, z };
+    this._anim.fires.push(f);
+    if (this._smokeTex) this._buildFire(f, scale);
+    return f;
+  }
+
+  _buildFire(f, scale = 1) {
+    if (!this._smokeTex) { this._smokeTex = smokeTexture(); this._textures.push(this._smokeTex); }
+    f.sprites = [];
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({
         map: this._smokeTex, transparent: true, depthWrite: false, opacity: 0.5,
-        color: 0xc05020, blending: THREE.AdditiveBlending,
+        color: 0x2a2824,
       }));
-      ember.scale.set(2.4, 2.4, 1); ember.position.set(f.x, 1, f.z);
-      this.root.add(ember); f.ember = ember;
+      const sc = (3 + i * 2.5) * scale;
+      s.scale.set(sc, sc, 1);
+      s.position.set(f.x, i * 4, f.z);
+      s.userData = { base: i * 4, phase: i / n };
+      this.root.add(s);
+      f.sprites.push(s);
     }
+    const ember = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this._smokeTex, transparent: true, depthWrite: false, opacity: 0.5,
+      color: 0xc05020, blending: THREE.AdditiveBlending,
+    }));
+    ember.scale.set(2.4 * scale, 2.4 * scale, 1); ember.position.set(f.x, 1, f.z);
+    this.root.add(ember); f.ember = ember;
   }
 
   // ---- marching infantry (instanced, animated) ----

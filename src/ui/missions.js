@@ -14,6 +14,7 @@ export const MISSIONS = [
         text: () => `Destroy machine-gun nests  ${killed(targets)}/3`,
         isWon: () => targets.every((t) => !t.alive),
         targets,
+        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
       };
     },
   },
@@ -29,6 +30,7 @@ export const MISSIONS = [
         text: () => `Flatten the bunkers  ${killed(targets)}/2`,
         isWon: () => targets.every((t) => !t.alive),
         targets,
+        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
       };
     },
   },
@@ -54,6 +56,7 @@ export const MISSIONS = [
         text: () => `Shoot down Fokkers  ${downed(enemies)}/${need}`,
         isWon: () => downed(enemies) >= need,
         enemies,
+        liveMarks: () => enemies.filter((e) => e.alive).map((e) => e.state.position),
       };
     },
   },
@@ -87,4 +90,9 @@ export default class MissionManager {
   }
 
   fail() { if (this.state === 'running') this.state = 'lost'; }
+
+  // live world positions of the current objectives (for off-screen arrows)
+  marks() {
+    return (this.runtime && this.runtime.liveMarks) ? this.runtime.liveMarks() : [];
+  }
 }

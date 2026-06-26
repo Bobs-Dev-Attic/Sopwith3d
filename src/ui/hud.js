@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { HUD_SCALE } from '../core/config.js';
 
 // Sweep of a 270° dial face with evenly spaced tick marks.
@@ -61,6 +62,46 @@ export default class HUD {
     };
     this._flash = 0;
     this._buildInstruments();
+
+    this._arrowHost = document.getElementById('target-arrows');
+    this._arrows = [];
+    this._proj = new THREE.Vector3();
+  }
+
+  // Edge arrows pointing toward off-screen objective positions.
+  updateArrows(positions, camera) {
+    const W = window.innerWidth, H = window.innerHeight;
+    const cx = W / 2, cy = H / 2;
+    const mx = cx - 30, my = cy - 30;     // inset rectangle the arrows ride
+    let used = 0;
+    for (const pos of positions) {
+      this._proj.copy(pos).project(camera);
+      let x = this._proj.x, y = this._proj.y;
+      const behind = this._proj.z > 1;
+      if (behind) { x = -x; y = -y; }
+      if (!behind && Math.abs(x) <= 0.96 && Math.abs(y) <= 0.96) continue; // on-screen
+      const m = Math.max(Math.abs(x), Math.abs(y)) || 1;
+      x /= m; y /= m;
+      const sx = cx + x * mx;
+      const sy = cy - y * my;
+      const a = this._arrow(used++);
+      const ang = Math.atan2(sy - cy, sx - cx);
+      a.style.left = `${sx}px`;
+      a.style.top = `${sy}px`;
+      a.style.transform = `translate(-50%,-50%) rotate(${ang}rad)`;
+      a.style.display = 'block';
+    }
+    for (let i = used; i < this._arrows.length; i++) this._arrows[i].style.display = 'none';
+  }
+
+  _arrow(i) {
+    if (!this._arrows[i]) {
+      const el = document.createElement('div');
+      el.className = 'target-arrow';
+      this._arrowHost.appendChild(el);
+      this._arrows[i] = el;
+    }
+    return this._arrows[i];
   }
 
   _buildInstruments() {
