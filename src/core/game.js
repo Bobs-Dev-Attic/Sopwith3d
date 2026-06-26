@@ -44,6 +44,7 @@ export default class Game {
     });
 
     this.running = false;
+    this._viewMode = 'chase';
     this.kills = 0;
     this._gunTimer = 0;
     this._deathTimer = 0;
@@ -75,6 +76,9 @@ export default class Game {
     this._oobTimer = 0;
     this._crashed = false;
     this._postCrash = 0;
+    this._viewMode = 'chase';
+    if (this.plane.parts.head) this.plane.parts.head.visible = true;
+    this.hud.setViewCaption('VIEW');
 
     // apply assist options
     this.plane.flightAssist = settings.get('flightAssist');
@@ -304,7 +308,16 @@ export default class Game {
 
     this.audio.update(this.plane.rpm, this.plane.state.throttle, this.plane.state.speed, this.plane.alive);
     this.hud.update(dt, this.plane);
-    this.chase.setZoom(this.input.cameraZoom);
+
+    // cockpit view is disabled while going down (the wreck is hidden)
+    const zoom = this.plane.alive ? this.input.cameraZoom : Math.max(0.3, this.input.cameraZoom);
+    this.chase.setZoom(zoom);
+    if (this.chase.mode !== this._viewMode) {
+      this._viewMode = this.chase.mode;
+      this.hud.flashViewFade();
+      this.hud.setViewCaption(this._viewMode === 'cockpit' ? 'COCKPIT' : 'VIEW');
+      if (this.plane.parts.head) this.plane.parts.head.visible = this._viewMode !== 'cockpit';
+    }
     this.chase.follow(this.plane, dt);
 
     // whiteout when the camera plunges into a cloud

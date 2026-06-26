@@ -122,6 +122,11 @@ export const CAMERA = {
   stiffness: 3.4,         // position follow
   rotStiffness: 2.6,      // aim follow
   fov: 75,                // wider field of view
+  // first-person cockpit view occupies the bottom of the VIEW slider
+  cockpitZoom: 0.12,      // slider <= this => cockpit
+  cockpitEye: { x: 0, y: 1.05, z: 0.15 }, // pilot eye, local to the plane
+  cockpitPitch: 0.06,     // look slightly down over the nose
+  cockpitShake: 0.07,     // positional shake at speed
 };
 
 // Readout scaling — purely cosmetic flavour for the HUD.
