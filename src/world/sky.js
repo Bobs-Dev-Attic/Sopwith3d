@@ -35,7 +35,10 @@ export function setupSky(scene) {
         gl_FragColor = vec4(mix(bottom, top, f), 1.0);
       }`,
   });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(WORLD.fogFar * 1.1, 24, 16), skyMat);
+  // Radius kept well inside the camera far plane so the dome is never clipped;
+  // it follows the camera each frame so it always fills the view.
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(5000, 32, 20), skyMat);
+  sky.renderOrder = -1;
   scene.add(sky);
 
   // Lighting — weak sun smothered by cloud, cool ambient fill.
@@ -66,10 +69,11 @@ export function setupSky(scene) {
   return {
     sun,
     update(dt, focus) {
-      // keep the shadow frustum following the action
+      // keep the shadow frustum and the sky dome following the action
       if (focus) {
         sun.target.position.copy(focus);
         sun.position.set(focus.x - 800, focus.y + 1200, focus.z + 600);
+        sky.position.copy(focus);
       }
       clouds.update(dt);
     },

@@ -51,13 +51,17 @@ html, body {
 .kills-line { font-size: 9px; letter-spacing: 2px; color: var(--parchment-dim); margin-top: 6px; }
 .kills-line span { color: var(--brass); font-weight: bold; }
 
-/* Brass instrument cluster (A.S.I. / altimeter / fuel / tachometer) */
+/* Cockpit instrument dashboard along the bottom (A.S.I. / altimeter / fuel / tach) */
 #instruments {
-  display: grid; grid-template-columns: repeat(2, 58px); gap: 6px;
-  padding: 7px; background: var(--panel); border: 1px solid var(--panel-edge);
-  border-radius: 6px; backdrop-filter: blur(2px);
+  pointer-events: none;
+  display: flex; justify-content: center; align-items: center; gap: 12px;
+  padding: 8px 18px;
+  background: linear-gradient(to bottom, rgba(46,38,26,0.72), rgba(26,22,15,0.8));
+  border: 1px solid var(--panel-edge); border-bottom: none;
+  border-radius: 10px 10px 0 0; backdrop-filter: blur(2px);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), 0 -2px 8px rgba(0,0,0,0.3);
 }
-.gauge { position: relative; width: 58px; height: 58px; }
+.gauge { position: relative; width: 60px; height: 60px; }
 .g-face { width: 100%; height: 100%; display: block; }
 .g-rim { fill: #1b1912; stroke: #b9933f; stroke-width: 3; }
 .g-glass { fill: #211f18; }
@@ -153,8 +157,13 @@ html, body {
 /* ---------------- Bottom controls ---------------- */
 #hud-bottom {
   position: absolute; left: 0; right: 0; bottom: 0;
-  display: flex; justify-content: space-between; align-items: flex-end;
+  display: flex; flex-direction: column; align-items: center;
   padding: 0 18px calc(var(--safe-b) + 16px);
+  gap: 10px;
+}
+#controls-row {
+  width: 100%;
+  display: flex; justify-content: space-between; align-items: flex-end;
   gap: 8px;
 }
 
@@ -287,5 +296,14 @@ html, body {
 
 /* Wider screens: keep controls reachable, not stretched across a desktop */
 @media (min-width: 900px) {
-  #hud-bottom { padding-left: 4vw; padding-right: 4vw; }
+  #controls-row { padding-left: 4vw; padding-right: 4vw; }
+  #instruments { gap: 18px; }
+}
+
+/* Short / landscape screens: shrink the dashboard so it doesn't crowd play */
+@media (max-height: 560px) {
+  .gauge { width: 46px; height: 46px; }
+  #instruments { gap: 8px; padding: 5px 12px; }
+  .g-read { font-size: 9px; bottom: 17%; }
+  .g-label { font-size: 5.5px; }
 }

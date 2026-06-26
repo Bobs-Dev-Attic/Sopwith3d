@@ -26,8 +26,6 @@
           <div class="objective-text">—</div>
           <div class="kills-line">CONFIRMED <span id="kills-val">0</span></div>
         </div>
-        <!-- brass instrument cluster, built by hud.js -->
-        <div id="instruments"></div>
       </div>
 
       <!-- chase-camera distance -->
@@ -54,6 +52,10 @@
       <div id="message-banner" class="hidden"></div>
 
       <div id="hud-bottom">
+        <!-- Cockpit instrument dashboard, built by hud.js -->
+        <div id="instruments"></div>
+
+        <div id="controls-row">
         <!-- Left: flight stick (pitch / yaw) -->
         <div id="stick-zone" class="control-zone">
           <div id="stick-base">
@@ -89,6 +91,7 @@
           </div>
           <div class="control-caption">PWR <span id="throttle-pct">70%</span></div>
         </div>
+        </div><!-- /controls-row -->
       </div>
     </div>
 
