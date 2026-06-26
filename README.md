@@ -63,6 +63,13 @@ back to the hangar.
 - Tracer rounds, muzzle flashes, bomb craters, balloon explosions, a drifting
   cloud bank, and a sun-shadowed battlefield.
 
+## Sound
+
+All audio is **synthesised at runtime with the Web Audio API** — no sound files,
+so it works offline too. A rotary-engine drone whose pitch/throb tracks RPM,
+airspeed wind, twin-Vickers gun reports, explosions, hit clangs, and a distant
+artillery ambience. Tap the speaker icon to mute (remembered between sessions).
+
 ## Project layout
 
 ```

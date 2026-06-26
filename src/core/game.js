@@ -8,6 +8,7 @@ import ParticleSystem from '../fx/particles.js';
 import { Projectiles, Bombs } from '../entities/weapons.js';
 import ChaseCamera from './chaseCamera.js';
 import { steerToward } from '../entities/steering.js';
+import AudioManager from '../audio/sound.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
 import { PLANE, ENEMY, WORLD } from './config.js';
@@ -29,6 +30,7 @@ export default class Game {
     this.bombs = new Bombs(scene, this.fx);
     this.chase = new ChaseCamera(camera);
     this.hud = new HUD();
+    this.audio = new AudioManager();
 
     this.missions = new MissionManager({
       battlefield: this.battlefield,
@@ -57,10 +59,13 @@ export default class Game {
     this.hud.setKills(0);
     this._deathTimer = 0;
     this._fuelWarned = false;
+    this._deathSoundPlayed = false;
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
     this.hud.show();
+    this.audio.unlock();
+    this.audio.startMission();
     this.running = true;
     const m = MISSIONS[missionIndex];
     this.hud.banner(m.name.toUpperCase());
@@ -102,6 +107,7 @@ export default class Game {
     e.onFire = (self) => {
       const { pos: mp, dir } = self.worldMuzzle();
       this.projectiles.fire(mp, dir, ENEMY.muzzleSpeed, 'enemy', ENEMY.gunDamage);
+      this.audio.enemyGun(mp.distanceTo(this.plane.state.position));
     };
     this.enemies.push(e);
     return e;
@@ -140,12 +146,13 @@ export default class Game {
     // --- battlefield (nests track & shoot the player) ---
     this.battlefield.update(dt, this.plane, (mp, dir) => {
       this.projectiles.fire(mp, dir, 540, 'enemy', 7);
+      this.audio.enemyGun(mp.distanceTo(this.plane.state.position));
     }, this.camera);
 
     // --- weapons & collisions ---
     const colliders = this._buildColliders();
     this.projectiles.update(dt, colliders);
-    this.bombs.update(dt, this.battlefield.targets, () => {});
+    this.bombs.update(dt, this.battlefield.targets, () => this.audio.groundBurst(2.2));
 
     this._tallyKills();
 
@@ -162,7 +169,12 @@ export default class Game {
       this._fuelWarned = true;
       this.hud.banner('ENGINE OUT — GLIDE HER DOWN');
     }
+    if (!this.plane.alive && !this._deathSoundPlayed) {
+      this._deathSoundPlayed = true;
+      this.audio.explosion(2.2);
+    }
 
+    this.audio.update(this.plane.rpm, this.plane.state.throttle, this.plane.state.speed, this.plane.alive);
     this.hud.update(dt, this.plane);
     this.chase.setZoom(this.input.cameraZoom);
     this.chase.follow(this.plane, dt);
@@ -182,6 +194,7 @@ export default class Game {
         p.x += off;
         this.projectiles.fire(p, dir, PLANE.muzzleSpeed, 'player', PLANE.gunDamage);
       }
+      this.audio.gun(0.5);
     }
     // bombs
     if (this.input.consumeBomb() && this.plane.bombs > 0) {
@@ -197,7 +210,7 @@ export default class Game {
     list.push({
       pos: this.plane.state.position, radius: 5.5, faction: 'player',
       alive: this.plane.alive,
-      hit: (d) => { this.plane.takeDamage(d); this.hud.flashHit(); },
+      hit: (d) => { this.plane.takeDamage(d); this.hud.flashHit(); this.audio.hit(); },
     });
     // enemy planes
     for (const e of this.enemies) {
@@ -239,12 +252,14 @@ export default class Game {
         this.kills++;
         this.hud.setKills(this.kills);
         this.hud.banner('FOKKER DOWN');
+        this.audio.explosion(1.5);
       }
     }
     for (const t of this.battlefield.targets) {
       if (!t.alive && !t._counted) {
         t._counted = true;
-        if (t.objective || true) { /* count all destructions toward score feel */ }
+        // balloons go up with a roar; bunkers/nests are a heavy ground blast
+        this.audio.explosion(t.type === 'balloon' ? 2.0 : 1.3);
       }
     }
   }
@@ -252,6 +267,7 @@ export default class Game {
   _end(win) {
     this.running = false;
     this.hud.hide();
+    this.audio.endMission();
     if (this.onMissionEnd) {
       this.onMissionEnd(win, {
         kills: this.kills,
