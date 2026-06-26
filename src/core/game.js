@@ -55,6 +55,7 @@ export default class Game {
     this.kills = 0;
     this.hud.setKills(0);
     this._deathTimer = 0;
+    this._fuelWarned = false;
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
@@ -136,7 +137,13 @@ export default class Game {
       if (this._deathTimer > 3) return this._end(false);
     }
 
+    if (this.plane.fuelOut && !this._fuelWarned) {
+      this._fuelWarned = true;
+      this.hud.banner('ENGINE OUT — GLIDE HER DOWN');
+    }
+
     this.hud.update(dt, this.plane);
+    this.chase.setZoom(this.input.cameraZoom);
     this.chase.follow(this.plane, dt);
     this.renderer.render(this.scene, this.camera);
   }

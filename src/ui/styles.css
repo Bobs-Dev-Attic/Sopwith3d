@@ -48,11 +48,54 @@ html, body {
 .objective-title { font-size: 10px; letter-spacing: 3px; color: var(--brass); }
 .objective-text { font-size: 13px; margin-top: 3px; color: var(--parchment); max-width: 46vw; }
 
-#stats { display: flex; gap: 14px; }
-.stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
-.stat-label { font-size: 9px; letter-spacing: 2px; color: var(--parchment-dim); }
-.stat span:nth-child(2) { font-size: 18px; font-weight: bold; color: var(--parchment); }
-.stat-unit { font-size: 8px; color: var(--parchment-dim); }
+.kills-line { font-size: 9px; letter-spacing: 2px; color: var(--parchment-dim); margin-top: 6px; }
+.kills-line span { color: var(--brass); font-weight: bold; }
+
+/* Brass instrument cluster (A.S.I. / altimeter / fuel / tachometer) */
+#instruments {
+  display: grid; grid-template-columns: repeat(2, 58px); gap: 6px;
+  padding: 7px; background: var(--panel); border: 1px solid var(--panel-edge);
+  border-radius: 6px; backdrop-filter: blur(2px);
+}
+.gauge { position: relative; width: 58px; height: 58px; }
+.g-face { width: 100%; height: 100%; display: block; }
+.g-rim { fill: #1b1912; stroke: #b9933f; stroke-width: 3; }
+.g-glass { fill: #211f18; }
+.g-hub { fill: #d8cdae; }
+.needle {
+  position: absolute; left: 50%; top: 14%; width: 2.4px; height: 36%;
+  background: linear-gradient(to top, #efe2bb, #bf8836);
+  transform-origin: 50% 100%; transform: translateX(-50%) rotate(-135deg);
+  border-radius: 2px; box-shadow: 0 0 3px rgba(0,0,0,0.7); pointer-events: none;
+}
+.g-label { position: absolute; top: 31%; left: 0; right: 0; text-align: center;
+  font-size: 6.5px; letter-spacing: 1px; color: var(--brass); }
+.g-read { position: absolute; bottom: 19%; left: 0; right: 0; text-align: center;
+  font-size: 11px; font-weight: bold; color: var(--parchment); text-shadow: 0 1px 2px #000; }
+.gauge.warn .g-read { color: #e8492f; animation: blink 0.6s steps(2) infinite; }
+.gauge.warn .g-rim { stroke: #e8492f; }
+
+/* VIEW / chase-distance slider (left edge) */
+#zoom-zone {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: auto;
+}
+#zoom-track {
+  width: 30px; height: 120px; border-radius: 16px; position: relative; overflow: hidden;
+  background: linear-gradient(to top, rgba(20,18,14,0.6), rgba(60,56,46,0.4));
+  border: 2px solid var(--panel-edge); touch-action: none;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+}
+#zoom-fill {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 26%;
+  background: linear-gradient(to top, rgba(90,110,120,0.5), rgba(150,165,170,0.45));
+}
+#zoom-knob {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(26% - 11px);
+  width: 26px; height: 22px; border-radius: 6px;
+  background: linear-gradient(to bottom, #6a6253, #2c281f);
+  border: 1px solid var(--brass); box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+}
 
 #gunsight {
   position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);

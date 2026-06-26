@@ -28,6 +28,11 @@ export default class Plane {
     this.maxHull = PLANE.hull;
     this.alive = true;
     this.bombs = PLANE.bombCount;
+    this.fuel = PLANE.fuel;
+    this.maxFuel = PLANE.fuel;
+    this.fuelOut = false;
+    this.commandedThrottle = PLANE.startThrottle;
+    this.rpm = PLANE.rpmIdle;
     this.propSpin = 0;
     this._smokeTimer = 0;
     this._surfaces = { pitch: 0, roll: 0, yaw: 0 };
@@ -43,10 +48,15 @@ export default class Plane {
       .applyQuaternion(this.state.quaternion)
       .multiplyScalar(PLANE.startSpeed);
     this.state.throttle = PLANE.startThrottle;
+    this.commandedThrottle = PLANE.startThrottle;
     this.hull = this.maxHull;
     this.alive = true;
     this.bombs = PLANE.bombCount;
+    this.fuel = this.maxFuel;
+    this.fuelOut = false;
+    this.rpm = PLANE.rpmIdle;
     this.group.visible = true;
+    this.group.rotation.set(0, 0, 0);
     this._syncTransform();
   }
 
@@ -57,11 +67,12 @@ export default class Plane {
     this.controls.yaw = yaw * 0.35; // a little rudder with the bank
   }
 
-  setThrottle(t) { this.state.throttle = THREE.MathUtils.clamp(t, 0, 1); }
+  setThrottle(t) { this.commandedThrottle = THREE.MathUtils.clamp(t, 0, 1); }
 
   update(dt) {
     if (!this.alive) { this._updateWreck(dt); return; }
 
+    this._burnFuel(dt);
     integrateFlight(this.state, this.controls, this.params, dt);
     this._syncTransform();
     this._animateSurfaces(dt);
@@ -72,6 +83,23 @@ export default class Plane {
   _syncTransform() {
     this.group.position.copy(this.state.position);
     this.group.quaternion.copy(this.state.quaternion);
+  }
+
+  _burnFuel(dt) {
+    if (this.fuel > 0) {
+      const burn = (PLANE.fuelBurnIdle +
+        this.commandedThrottle * (PLANE.fuelBurnFull - PLANE.fuelBurnIdle)) * dt;
+      this.fuel = Math.max(0, this.fuel - burn);
+    }
+    this.fuelOut = this.fuel <= 0;
+    // dry tank => dead engine; she still flies, but as a glider now
+    this.state.throttle = this.fuelOut ? 0 : this.commandedThrottle;
+    if (this.fuelOut) {
+      const windmill = THREE.MathUtils.clamp(this.state.speed / this.params.cruiseSpeed, 0, 0.45);
+      this.rpm = windmill * PLANE.rpmIdle;
+    } else {
+      this.rpm = THREE.MathUtils.lerp(PLANE.rpmIdle, PLANE.rpmMax, this.commandedThrottle);
+    }
   }
 
   _animateSurfaces(dt) {

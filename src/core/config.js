@@ -38,6 +38,12 @@ export const PLANE = {
   bombs: 6,
   muzzleSpeed: 620,
   bombCount: 6,
+  // fuel as a real resource (percent); burn scales with throttle
+  fuel: 100,
+  fuelBurnIdle: 0.15,
+  fuelBurnFull: 0.9,
+  rpmIdle: 650,
+  rpmMax: 1250,
 };
 
 export const ENEMY = {
@@ -63,9 +69,13 @@ export const ENEMY = {
 };
 
 export const CAMERA = {
-  distance: 26,
-  height: 9,
+  // chase distance/height are interpolated between these by the VIEW slider
+  distanceNear: 13,
+  distanceFar: 46,
+  heightNear: 4.5,
+  heightFar: 17,
   lookAhead: 14,
+  defaultZoom: 0.26,      // closer than before by default
   stiffness: 3.4,         // position follow
   rotStiffness: 2.6,      // aim follow
   fov: 62,

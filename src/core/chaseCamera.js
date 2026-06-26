@@ -3,6 +3,7 @@ import { CAMERA } from './config.js';
 
 // Damped 3rd-person chase cam. Stays world-upright (doesn't roll with the
 // plane) so hard banks read clearly without making the player seasick.
+// Chase distance is adjustable at runtime via the VIEW slider (setZoom).
 export default class ChaseCamera {
   constructor(camera) {
     this.camera = camera;
@@ -11,7 +12,17 @@ export default class ChaseCamera {
     this._fwd = new THREE.Vector3();
     this._desired = new THREE.Vector3();
     this._lookTarget = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
     this._init = false;
+    this.distance = THREE.MathUtils.lerp(CAMERA.distanceNear, CAMERA.distanceFar, CAMERA.defaultZoom);
+    this.height = THREE.MathUtils.lerp(CAMERA.heightNear, CAMERA.heightFar, CAMERA.defaultZoom);
+  }
+
+  // t in [0,1]: 0 = right behind the tail, 1 = high and far
+  setZoom(t) {
+    t = THREE.MathUtils.clamp(t, 0, 1);
+    this.distance = THREE.MathUtils.lerp(CAMERA.distanceNear, CAMERA.distanceFar, t);
+    this.height = THREE.MathUtils.lerp(CAMERA.heightNear, CAMERA.heightFar, t);
   }
 
   follow(target, dt) {
@@ -24,8 +35,8 @@ export default class ChaseCamera {
     flatFwd.normalize();
 
     this._desired.copy(s.position)
-      .addScaledVector(flatFwd, -CAMERA.distance)
-      .add(new THREE.Vector3(0, CAMERA.height, 0));
+      .addScaledVector(flatFwd, -this.distance)
+      .addScaledVector(this._up, this.height);
 
     this._lookTarget.copy(s.position).addScaledVector(this._fwd, CAMERA.lookAhead);
 
