@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#2b2a26" />
+  <title>Sopwith Camel — Western Front</title>
+  <link rel="stylesheet" href="./src/ui/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene"></canvas>
+
+    <!-- Heads-up display -->
+    <div id="hud" class="hidden">
+      <div id="hud-top">
+        <div id="objective" class="hud-panel">
+          <div class="objective-title">MISSION</div>
+          <div class="objective-text">—</div>
+        </div>
+        <div id="stats" class="hud-panel">
+          <div class="stat"><span class="stat-label">ALT</span><span id="alt-val">0</span><span class="stat-unit">ft</span></div>
+          <div class="stat"><span class="stat-label">SPD</span><span id="spd-val">0</span><span class="stat-unit">mph</span></div>
+          <div class="stat"><span class="stat-label">KILLS</span><span id="kills-val">0</span></div>
+        </div>
+      </div>
+
+      <div id="gunsight">
+        <div class="gs-ring"></div>
+        <div class="gs-dot"></div>
+        <div class="gs-tick gs-l"></div>
+        <div class="gs-tick gs-r"></div>
+        <div class="gs-tick gs-t"></div>
+      </div>
+
+      <div id="stall-warning" class="hidden">STALL</div>
+      <div id="hit-flash"></div>
+      <div id="message-banner" class="hidden"></div>
+
+      <div id="hud-bottom">
+        <!-- Left: flight stick (pitch / yaw) -->
+        <div id="stick-zone" class="control-zone">
+          <div id="stick-base">
+            <div id="stick-knob"></div>
+          </div>
+          <div class="control-caption">PITCH / YAW</div>
+        </div>
+
+        <!-- Center action buttons -->
+        <div id="action-cluster">
+          <div id="health-wrap">
+            <div class="bar-label">HULL</div>
+            <div id="health-bar"><div id="health-fill"></div></div>
+          </div>
+          <div id="buttons-row">
+            <button id="btn-bomb" class="action-btn">
+              <span class="btn-glyph">✱</span>
+              <span class="btn-count" id="bomb-count">6</span>
+              <span class="btn-name">BOMBS</span>
+            </button>
+            <button id="btn-fire" class="action-btn fire">
+              <span class="btn-glyph">⦿</span>
+              <span class="btn-name">GUNS</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: throttle slider -->
+        <div id="throttle-zone" class="control-zone">
+          <div id="throttle-track">
+            <div id="throttle-fill"></div>
+            <div id="throttle-knob"></div>
+          </div>
+          <div class="control-caption">PWR <span id="throttle-pct">70%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menus -->
+    <div id="overlay">
+      <div id="title-screen" class="screen">
+        <div class="screen-inner">
+          <h1 class="game-title">SOPWITH CAMEL</h1>
+          <div class="game-subtitle">— WESTERN FRONT 1917 —</div>
+          <div id="mission-list"></div>
+          <div class="hint">Tilt into the wind. Watch your speed. Good hunting.</div>
+        </div>
+      </div>
+
+      <div id="end-screen" class="screen hidden">
+        <div class="screen-inner">
+          <h2 id="end-title">MISSION COMPLETE</h2>
+          <div id="end-summary"></div>
+          <button id="btn-continue" class="menu-btn">RETURN TO HANGAR</button>
+        </div>
+      </div>
+
+      <div id="loading" class="screen">
+        <div class="screen-inner">
+          <div class="loader-ring"></div>
+          <div class="loading-text">WARMING THE ENGINE…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
