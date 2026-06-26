@@ -4,6 +4,39 @@ import * as THREE from 'three';
 // objective against the battlefield and returns a small runtime tracker.
 export const MISSIONS = [
   {
+    no: 'TRAINING',
+    name: 'Flight School',
+    desc: 'A quiet sector behind our lines to find your wings. Practice flying, strafe the ground targets with your guns, bomb the bunkers, and down a couple of target drones. Nobody shoots back — fuel is unlimited.',
+    begin(ctx) {
+      const g = ctx.game;
+      g.peaceful = true;           // hostiles hold fire
+      g.plane.unlimitedFuel = true; // practice as long as you like
+
+      // practice ground targets, laid out ahead of the start point
+      const nests = ctx.battlefield.mgNests.slice(0, 3);
+      const bunkers = ctx.battlefield.bunkers.slice(0, 2);
+      const place = (t, x, z) => { t.group.position.set(x, 0, z); t.pos.set(x, t.pos.y, z); };
+      place(nests[0], -260, -280); place(nests[1], 260, -440); place(nests[2], 0, -640);
+      place(bunkers[0], -260, -920); place(bunkers[1], 260, -1040);
+      [...nests, ...bunkers].forEach((t) => ctx.battlefield.markObjective(t));
+
+      // disarmed target drones for gunnery practice
+      const drones = [];
+      [[-320, 360, -780], [340, 410, -1000]].forEach(([x, y, z]) => {
+        const e = ctx.spawnEnemy(new THREE.Vector3(x, y, z), Math.PI);
+        e.onFire = () => {};       // they won't shoot back
+        drones.push(e);
+      });
+
+      return {
+        text: () => `Strafe ${killed(nests)}/3 · Bomb ${killed(bunkers)}/2 · Drones ${downed(drones)}/2`,
+        isWon: () => nests.every((t) => !t.alive) && bunkers.every((t) => !t.alive) && downed(drones) >= 2,
+        liveMarks: () => [...nests, ...bunkers].filter((t) => t.alive).map((t) => t.pos)
+          .concat(drones.filter((d) => d.alive).map((d) => d.state.position)),
+      };
+    },
+  },
+  {
     no: 'SORTIE I',
     name: 'Silence the Guns',
     desc: 'Enemy machine-gun nests are pinning our infantry in no-man’s-land. Strafe and destroy three of them.',

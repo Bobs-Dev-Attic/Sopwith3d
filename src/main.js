@@ -60,7 +60,8 @@ const titleScreen = document.getElementById('title-screen');
 const endScreen = document.getElementById('end-screen');
 const optionsScreen = document.getElementById('options-screen');
 const loading = document.getElementById('loading');
-let highestUnlocked = 0;
+// index 0 is training, 1 is the first combat sortie — both open from the start
+let highestUnlocked = 1;
 
 // --- options / assists ------------------------------------------------------
 function buildOptions() {
