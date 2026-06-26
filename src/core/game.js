@@ -7,9 +7,10 @@ import EnemyPlane from '../entities/EnemyPlane.js';
 import ParticleSystem from '../fx/particles.js';
 import { Projectiles, Bombs } from '../entities/weapons.js';
 import ChaseCamera from './chaseCamera.js';
+import { steerToward } from '../entities/steering.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
-import { PLANE, ENEMY } from './config.js';
+import { PLANE, ENEMY, WORLD } from './config.js';
 
 export default class Game {
   constructor(renderer, scene, camera) {
@@ -71,8 +72,27 @@ export default class Game {
   // bunkers/balloons and spent objective markers don't linger between runs.
   _rebuildBattlefield() {
     if (this.battlefield) this.battlefield.dispose();
-    this.battlefield = new Battlefield(this.scene, this.fx);
+    const seed = (Math.floor(Math.random() * 1e9) + 1) | 0;
+    this.battlefield = new Battlefield(this.scene, this.fx, seed);
     this.missions.ctx.battlefield = this.battlefield;
+  }
+
+  // Soft patrol boundary: ease the plane back toward the action when it strays
+  // beyond the combat radius, rather than letting it vanish into the fog.
+  _applyBoundary(dt) {
+    const p = this.plane;
+    const x = p.state.position.x, z = p.state.position.z;
+    const r = Math.hypot(x, z);
+    if (r < WORLD.combatRadius) { this._oobTimer = 0; return; }
+    const t = THREE.MathUtils.clamp((r - WORLD.combatRadius) / WORLD.boundaryBand, 0, 1);
+    const desired = new THREE.Vector3(-x, 0, -z).normalize();
+    const steer = steerToward(p.state.quaternion, desired);
+    p.setSteer(steer, t * 0.9);   // blended over the player's input in update()
+    this._oobTimer = (this._oobTimer || 0) - dt;
+    if (this._oobTimer <= 0) {
+      this._oobTimer = 3.2;
+      this.hud.banner('RETURN TO THE FRONT');
+    }
   }
 
   _spawnEnemy(pos, heading) {
@@ -106,6 +126,7 @@ export default class Game {
       this.plane.setStick(this.input.pitch, this.input.yaw);
       this.plane.setThrottle(this.input.throttle);
       this._handlePlayerWeapons(dt);
+      this._applyBoundary(dt);
     }
     this.plane.update(dt);
     this._checkGround(this.plane, true);

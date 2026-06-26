@@ -41,9 +41,11 @@ class GroundTarget {
 }
 
 export default class Battlefield {
-  constructor(scene, fx) {
+  constructor(scene, fx, seed = 1) {
     this.scene = scene;
     this.fx = fx;
+    this.seed = seed;
+    this.rng = rand(seed);            // every sortie lays out differently
     this.root = new THREE.Group();
     scene.add(this.root);
     this.mgNests = [];
@@ -51,10 +53,13 @@ export default class Battlefield {
     this.balloons = [];
     this._markerTex = beamTexture();
 
-    this._buildTrenchLine(-260, 0x000000);   // enemy front line (north)
-    this._buildTrenchLine(260, 0x000000);    // support line
-    this._scatterWire(-180);
-    this._scatterWire(120);
+    // Front lines wander a little each sortie.
+    const frontZ = -240 - this.rng() * 80;
+    this._buildTrenchLine(frontZ);
+    this._buildTrenchLine(frontZ + 520);
+    this._buildTrenchLine(frontZ - 460);
+    this._scatterWire(frontZ + 80);
+    this._scatterWire(frontZ + 380);
     this._scatterTrees();
     this._placeNests();
     this._placeBunkers();
@@ -67,8 +72,8 @@ export default class Battlefield {
 
   // ---- trench line: a zig-zag of revetment walls + firing step ----
   _buildTrenchLine(z) {
-    const len = 4200;
-    const seg = 70;
+    const len = 9000;
+    const seg = 80;
     const count = Math.floor(len / seg);
     for (let i = 0; i < count; i++) {
       const x = -len / 2 + i * seg;
@@ -97,13 +102,13 @@ export default class Battlefield {
   }
 
   _scatterWire(z) {
-    const rng = rand(z + 99);
+    const rng = rand(z + 99 + this.seed);
     const postGeo = new THREE.CylinderGeometry(0.18, 0.18, 3, 5);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x2a2620, transparent: true, opacity: 0.6 });
     for (let row = 0; row < 3; row++) {
       const zz = z + row * 22;
       const pts = [];
-      for (let x = -2000; x <= 2000; x += 40) {
+      for (let x = -4200; x <= 4200; x += 42) {
         const post = new THREE.Mesh(postGeo, M.bark);
         const h = 2.6 + rng() * 0.8;
         post.scale.y = h / 3;
@@ -117,10 +122,10 @@ export default class Battlefield {
   }
 
   _scatterTrees() {
-    const rng = rand(123);
-    for (let i = 0; i < 90; i++) {
-      const x = (rng() - 0.5) * 5000;
-      const z = (rng() - 0.5) * 5000;
+    const rng = rand(123 + this.seed);
+    for (let i = 0; i < 220; i++) {
+      const x = (rng() - 0.5) * 9500;
+      const z = (rng() - 0.5) * 9500;
       if (Math.abs(z) < 60) continue;
       const h = 4 + rng() * 9;
       const trunk = new THREE.Mesh(
@@ -136,13 +141,12 @@ export default class Battlefield {
   }
 
   _placeNests() {
-    const spots = [
-      [-300, -300], [200, -280], [-650, -240], [500, -340], [-60, -360],
-      [820, -300], [-900, -320],
-    ];
-    for (const [x, z] of spots) {
-      const t = this._makeNest(x, z);
-      this.mgNests.push(t);
+    // scatter machine-gun nests across the enemy frontage (varies per sortie)
+    const count = 12 + Math.floor(this.rng() * 4);
+    for (let i = 0; i < count; i++) {
+      const x = (this.rng() - 0.5) * 2800;
+      const z = -180 - this.rng() * 620;
+      this.mgNests.push(this._makeNest(x, z));
     }
   }
 
@@ -211,7 +215,11 @@ export default class Battlefield {
   }
 
   _placeBunkers() {
-    const spots = [[-120, 250], [420, 270], [-560, 240]];
+    const count = 4 + Math.floor(this.rng() * 2);
+    const spots = [];
+    for (let i = 0; i < count; i++) {
+      spots.push([(this.rng() - 0.5) * 2400, 180 + this.rng() * 360]);
+    }
     for (const [x, z] of spots) {
       const g = new THREE.Group();
       g.position.set(x, 0, z);
@@ -241,7 +249,11 @@ export default class Battlefield {
   }
 
   _placeBalloons() {
-    const spots = [[-400, -700], [600, -800]];
+    const count = 3 + Math.floor(this.rng() * 2);
+    const spots = [];
+    for (let i = 0; i < count; i++) {
+      spots.push([(this.rng() - 0.5) * 2600, -650 - this.rng() * 650]);
+    }
     for (const [x, z] of spots) {
       const g = new THREE.Group();
       g.position.set(x, 0, z);

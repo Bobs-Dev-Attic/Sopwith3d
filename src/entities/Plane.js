@@ -1,7 +1,17 @@
 import * as THREE from 'three';
 import { buildCamel } from './models.js';
 import { integrateFlight } from './flight.js';
+import { bankAngle } from './steering.js';
 import { PLANE } from '../core/config.js';
+
+// Deadzone + expo response curve for the flight stick.
+function shapeStick(x) {
+  const s = Math.sign(x);
+  let a = Math.abs(x);
+  if (a < PLANE.stickDeadzone) return 0;
+  a = (a - PLANE.stickDeadzone) / (1 - PLANE.stickDeadzone);
+  return s * Math.pow(a, PLANE.stickExpo);
+}
 
 // The player's Sopwith Camel.
 export default class Plane {
@@ -22,6 +32,9 @@ export default class Plane {
       stalled: false,
     };
     this.controls = { pitch: 0, roll: 0, yaw: 0 };
+    this._pitchInput = 0;
+    this._bankInput = 0;
+    this._steerOverride = null;
     this.params = PLANE;
 
     this.hull = PLANE.hull;
@@ -61,10 +74,37 @@ export default class Plane {
   }
 
   setStick(pitch, yaw) {
-    // Joystick: vertical = pitch, horizontal = bank/yaw (coordinated turn).
-    this.controls.pitch = pitch;
-    this.controls.roll = -yaw;      // push right => bank right
-    this.controls.yaw = yaw * 0.35; // a little rudder with the bank
+    // Shape the raw stick so small movements are gentle (expo) and tiny jitter
+    // near centre is ignored (deadzone). Full deflection still gives full input.
+    // Stored as inputs; controls are derived in update() (bank-angle control).
+    this._pitchInput = shapeStick(pitch);
+    this._bankInput = shapeStick(yaw);
+  }
+
+  // Patrol-boundary (or any autopilot) can blend its own stick commands over
+  // the player's for one frame, weighted by k in [0,1].
+  setSteer(controls, k) { this._steerOverride = { controls, k }; }
+
+  // Bank-angle control: stick X commands a target bank that the plane settles
+  // onto and holds (auto-levelling when centred), giving a smooth coordinated
+  // turn instead of a continuous roll.
+  _computeControls() {
+    const targetBank = this._bankInput * PLANE.maxBank;
+    const bank = bankAngle(this.state.quaternion);
+    this.controls.roll = THREE.MathUtils.clamp((targetBank - bank) * PLANE.rollGain, -1, 1);
+    // automatic back-pressure scaled to how steeply we're banked — holds the
+    // nose up through a turn so it stays coordinated instead of spiralling down
+    const turnPull = Math.abs(bank) * PLANE.turnPull;
+    this.controls.pitch = THREE.MathUtils.clamp(this._pitchInput + turnPull, -1, 1);
+    this.controls.yaw = this._bankInput * PLANE.coordYaw;
+
+    if (this._steerOverride) {
+      const { controls: c, k } = this._steerOverride;
+      this.controls.roll = THREE.MathUtils.lerp(this.controls.roll, c.roll, k);
+      this.controls.pitch = THREE.MathUtils.lerp(this.controls.pitch, c.pitch, k);
+      this.controls.yaw = THREE.MathUtils.lerp(this.controls.yaw, c.yaw, k);
+      this._steerOverride = null;
+    }
   }
 
   setThrottle(t) { this.commandedThrottle = THREE.MathUtils.clamp(t, 0, 1); }
@@ -73,6 +113,7 @@ export default class Plane {
     if (!this.alive) { this._updateWreck(dt); return; }
 
     this._burnFuel(dt);
+    this._computeControls();
     integrateFlight(this.state, this.controls, this.params, dt);
     this._syncTransform();
     this._animateSurfaces(dt);
