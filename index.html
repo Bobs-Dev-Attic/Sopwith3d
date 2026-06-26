@@ -110,14 +110,31 @@
     <!-- Menus -->
     <div id="overlay">
       <div id="title-screen" class="screen">
+        <button id="menu-icon" class="menu-icon" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
         <div class="screen-inner">
           <h1 class="game-title">SOPWITH CAMEL</h1>
           <div class="game-subtitle">— WESTERN FRONT 1917 —</div>
           <div id="mission-list"></div>
-          <button id="btn-options" class="menu-btn menu-btn-sm">OPTIONS</button>
           <div class="hint">Tilt into the wind. Watch your speed. Good hunting.</div>
         </div>
         <div id="version-tag" class="version-tag"></div>
+      </div>
+
+      <div id="menu-screen" class="screen hidden">
+        <div class="screen-inner">
+          <h2 class="menu-title">MENU</h2>
+          <div class="menu-list">
+            <button class="menu-btn" id="m-new">NEW GAME</button>
+            <button class="menu-btn" id="m-options">OPTIONS</button>
+            <button class="menu-btn" id="m-ranks">RANKS</button>
+            <button class="menu-btn" id="m-howto">HOW TO PLAY</button>
+            <button class="menu-btn" id="m-install">INSTALL / UPDATE</button>
+            <button class="menu-btn menu-btn-sm" id="m-close">BACK</button>
+          </div>
+          <div class="menu-version" id="menu-version"></div>
+        </div>
       </div>
 
       <div id="options-screen" class="screen hidden">
@@ -126,6 +143,40 @@
           <div class="options-sub">— ASSISTS &amp; EXTRAS —</div>
           <div id="options-list"></div>
           <button id="btn-options-back" class="menu-btn">BACK</button>
+        </div>
+      </div>
+
+      <div id="ranks-screen" class="screen hidden">
+        <div class="screen-inner">
+          <h2 class="options-title">RANKS</h2>
+          <div class="options-sub">— HIGH SCORES —</div>
+          <div id="ranks-list"></div>
+          <button id="ranks-back" class="menu-btn">BACK</button>
+        </div>
+      </div>
+
+      <div id="howto-screen" class="screen hidden">
+        <div class="screen-inner">
+          <h2 class="options-title">HOW TO PLAY</h2>
+          <div id="howto-body" class="howto-body">
+            <div class="howto-sec">
+              <div class="howto-h">CONTROLS</div>
+              <p><b>Stick</b> (left) — push to dive, pull to climb, left/right to bank into a turn.</p>
+              <p><b>Power</b> (right) — engine throttle. Keep your speed up or the wing will stall.</p>
+              <p><b>Guns</b> / <b>Bombs</b> — fire the twin Vickers; pickle bombs on ground targets.</p>
+              <p><b>View</b> (left slider) — slide between chase distances; the bottom is the cockpit.</p>
+            </div>
+            <div class="howto-sec">
+              <div class="howto-h">THE SORTIE</div>
+              <p>Follow the pulsing beacons, the edge arrows, and the top-right radar to your objectives. Strafe nests, bomb bunkers, and dogfight Fokkers.</p>
+              <p>Watch the <b>HULL</b> bar and your <b>FUEL</b>. Hitting the ground is a crash. Don't fly off the map — the flak will find you.</p>
+            </div>
+            <div class="howto-sec">
+              <div class="howto-h">NEED IT EASIER?</div>
+              <p>Turn on <b>Flight Assist</b>, <b>Aim Assist</b>, <b>Reinforced Hull</b> or <b>Unlimited Fuel</b> in Options. New pilots should start with <b>Flight School</b>.</p>
+            </div>
+          </div>
+          <button id="howto-back" class="menu-btn">BACK</button>
         </div>
       </div>
 
