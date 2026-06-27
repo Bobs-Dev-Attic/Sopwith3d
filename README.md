@@ -45,6 +45,14 @@ A semi-realistic arcade model (`src/entities/flight.js`):
 The same model flies the AI Fokkers, which pursue, lead their shots, bank into
 turns, pull up to avoid the dirt, and only fire when the nose is on target.
 
+**Realism options** layer real atmospherics on top (all off by default, so the
+base game is unchanged): **Wind & Gusts** (aerodynamics act on airspeed relative
+to a drifting, gusting wind, so you drift and have to crab into it), **Rain &
+Murk** (heavier, bumpier wet air and poor visibility), **Cold Air** (colder =
+denser air = more lift and engine bite), and **Realistic Stalls** (a sharper
+stall break, mushier controls near the stall, and thinner air — less lift and
+power — as you climb). A HUD readout shows wind speed/direction and temperature.
+
 ## Missions
 
 1. **Silence the Guns** — strafe and destroy three machine-gun nests.

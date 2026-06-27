@@ -58,11 +58,11 @@ export default class EnemyPlane {
     this.group.visible = true;
   }
 
-  update(dt, target) {
+  update(dt, target, env) {
     if (!this.alive) { this._updateWreck(dt); return; }
 
     this._think(dt, target);
-    integrateFlight(this.state, this.controls, this.params, dt);
+    integrateFlight(this.state, this.controls, this.params, dt, env);
     this.group.position.copy(this.state.position);
     this.group.quaternion.copy(this.state.quaternion);
 

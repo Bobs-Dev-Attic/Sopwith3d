@@ -10,6 +10,8 @@ import { Projectiles, Bombs } from '../entities/weapons.js';
 import ChaseCamera from './chaseCamera.js';
 import { steerToward } from '../entities/steering.js';
 import AudioManager from '../audio/sound.js';
+import Environment from './environment.js';
+import Rain from '../fx/rain.js';
 import settings from './settings.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
@@ -25,6 +27,12 @@ export default class Game {
     this.fx = new ParticleSystem(scene);
     this.debris = new Debris(scene);
     this.sky = setupSky(scene);
+    this.environment = new Environment();
+    this.rain = new Rain(scene);
+    // remember fair-weather fog so we can thicken it for rain and restore it
+    this._fog = scene.fog
+      ? { near: scene.fog.near, far: scene.fog.far, color: scene.fog.color.clone() }
+      : null;
     this.terrain = buildTerrain(scene);
     this.clouds = new Clouds(scene);
     this.battlefield = new Battlefield(scene, this.fx);
@@ -101,6 +109,11 @@ export default class Game {
     this.plane.unlimitedFuel = settings.get('unlimitedFuel');
     this.plane.damageScale = settings.get('reinforcedHull') ? 0.5 : 1;
     this.aimAssist = settings.get('aimAssist');
+
+    // weather / atmosphere
+    this.environment.reset();
+    this.environment.configure(settings);
+    this._applyWeather();
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
@@ -218,6 +231,25 @@ export default class Game {
     this.projectiles.fire(origin, aim, 560, 'enemy', 8);
   }
 
+  _applyWeather() {
+    const raining = this.environment.rain;
+    this.rain.setActive(raining);
+    if (this.sky.setRain) this.sky.setRain(raining);
+    if (this._fog && this.scene.fog) {
+      if (raining) {
+        this.scene.fog.near = 280;
+        this.scene.fog.far = 2500;
+        this.scene.fog.color.setHex(0x686b6e);
+        if (this.scene.background && this.scene.background.setHex) this.scene.background.setHex(0x686b6e);
+      } else {
+        this.scene.fog.near = this._fog.near;
+        this.scene.fog.far = this._fog.far;
+        this.scene.fog.color.copy(this._fog.color);
+        if (this.scene.background && this.scene.background.copy) this.scene.background.copy(this._fog.color);
+      }
+    }
+  }
+
   // big ground blast: fireball + dirt + shockwave + flying debris + boom
   _groundExplosion(pos, size = 2.6) {
     const p = pos.clone(); p.y = Math.max(0, p.y);
@@ -323,6 +355,8 @@ export default class Game {
     this.debris.update(dt);
     this.sky.update(dt, this.plane.state.position);
     this.clouds.update(dt);
+    this.environment.update(dt);
+    this.rain.update(dt, this.camera.position, this.environment.wind);
 
     if (!this.running) { this.renderer.render(this.scene, this.camera); return; }
 
@@ -343,12 +377,13 @@ export default class Game {
         this._ambientFlak(dt);
       }
     }
-    this.plane.update(dt);
+    const env = this.environment.envFor();
+    this.plane.update(dt, env);
     this._checkGround(this.plane, true);
 
     // --- enemies ---
     for (const e of this.enemies) {
-      e.update(dt, this.plane);
+      e.update(dt, this.plane, env);
       if (e.alive) this._checkGround(e, false);
     }
 
@@ -417,6 +452,10 @@ export default class Game {
     this.hud.updateArrows(this.missions.marks(), this.camera);
     // radar / minimap
     this.hud.updateMinimap(dt, this.plane, this.enemies, this.battlefield.targets, this.missions.marks());
+
+    // wind / weather indicator
+    const fwd = this._bcHoriz.set(0, 0, -1).applyQuaternion(this.plane.state.quaternion);
+    this.hud.setWind(this.environment.active, this.environment.readout(), Math.atan2(fwd.x, fwd.z));
 
     this.renderer.render(this.scene, this.camera);
   }

@@ -122,12 +122,12 @@ export default class Plane {
 
   setThrottle(t) { this.commandedThrottle = THREE.MathUtils.clamp(t, 0, 1); }
 
-  update(dt) {
+  update(dt, env) {
     if (!this.alive) { this._updateWreck(dt); return; }
 
     this._burnFuel(dt);
     this._computeControls();
-    integrateFlight(this.state, this.controls, this.params, dt);
+    integrateFlight(this.state, this.controls, this.params, dt, env);
     this._syncTransform();
     this._animateSurfaces(dt);
     this._spinProp(dt);
