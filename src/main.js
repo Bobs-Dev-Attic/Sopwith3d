@@ -106,7 +106,15 @@ let highestUnlocked = loadUnlocked();
 function buildOptions() {
   const list = document.getElementById('options-list');
   list.innerHTML = '';
+  let group = null;
   OPTION_DEFS.forEach((opt) => {
+    if (opt.group && opt.group !== group) {
+      group = opt.group;
+      const h = document.createElement('div');
+      h.className = 'option-group';
+      h.textContent = group;
+      list.appendChild(h);
+    }
     const row = document.createElement('div');
     row.className = 'option-row';
     row.innerHTML = `

@@ -54,6 +54,24 @@ html, body {
 }
 #minimap { width: 100%; height: 100%; display: block; }
 
+/* wind / weather indicator (under the radar) */
+#wind-indicator {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 128px); right: 14px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+  padding: 5px 9px 5px 6px; backdrop-filter: blur(2px); text-shadow: 0 1px 2px #000;
+}
+.wind-dial { position: relative; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--panel-edge); background: rgba(20,18,14,0.6); }
+.wind-arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-bottom: 12px solid var(--brass);
+  transform-origin: 50% 100%; transform: translate(-50%, -100%) rotate(0deg); }
+.wind-info { line-height: 1.1; }
+.wind-line { font-size: 14px; font-weight: bold; color: var(--parchment); }
+.wind-unit { font-size: 8px; color: var(--parchment-dim); margin-left: 2px; }
+.wind-sub { font-size: 9px; letter-spacing: 1px; color: var(--brass); margin-top: 1px; }
+
 .kills-line { font-size: 9px; letter-spacing: 2px; color: var(--parchment-dim); margin-top: 6px; }
 .kills-line span { color: var(--brass); font-weight: bold; }
 
@@ -402,7 +420,13 @@ html, body {
 /* Options / assists screen */
 .options-title { font-size: clamp(28px,9vw,46px); letter-spacing: 5px; color: var(--parchment); text-shadow: 0 3px 0 #000; }
 .options-sub { color: var(--brass); letter-spacing: 4px; font-size: 12px; margin: 8px 0 22px; }
-#options-list { display: flex; flex-direction: column; gap: 10px; max-width: 440px; margin: 0 auto 24px; }
+#options-list { display: flex; flex-direction: column; gap: 10px; max-width: 440px; margin: 14px auto 24px; }
+.option-group {
+  text-align: left; color: var(--brass); letter-spacing: 3px; font-size: 12px;
+  margin: 10px 2px 2px; padding-bottom: 4px; border-bottom: 1px solid var(--panel-edge);
+  text-transform: uppercase;
+}
+.option-group:first-child { margin-top: 0; }
 .option-row {
   display: flex; justify-content: space-between; align-items: center; gap: 14px;
   padding: 12px 14px; text-align: left;

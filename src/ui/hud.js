@@ -64,6 +64,11 @@ export default class HUD {
       viewCaption: document.getElementById('view-caption'),
       cineBars: document.getElementById('cine-bars'),
       cineLabel: document.getElementById('cine-label'),
+      wind: document.getElementById('wind-indicator'),
+      windArrow: document.getElementById('wind-arrow'),
+      windSpd: document.getElementById('wind-spd'),
+      windTemp: document.getElementById('wind-temp'),
+      windCond: document.getElementById('wind-cond'),
     };
     this._flash = 0;
     this._buildInstruments();
@@ -150,6 +155,17 @@ export default class HUD {
 
   setKills(n) { this.el.kills.textContent = n; }
   setScore(n) { this.el.score.textContent = n; }
+
+  // wind/weather readout; arrow shows wind direction relative to the nose
+  setWind(active, readout, planeHeading) {
+    if (!active) { this.el.wind.classList.add('hidden'); return; }
+    this.el.wind.classList.remove('hidden');
+    const rel = (readout.windToward - planeHeading) * 180 / Math.PI;
+    this.el.windArrow.style.transform = `translate(-50%, -100%) rotate(${rel.toFixed(0)}deg)`;
+    this.el.windSpd.textContent = Math.round(readout.windSpeed * HUD_SCALE.spdToMph);
+    this.el.windTemp.textContent = `${Math.round(readout.tempC)}°`;
+    this.el.windCond.textContent = readout.label;
+  }
   setObjective(text) { this.el.objective.textContent = text; }
   setCloudVeil(v) { this.el.cloudVeil.style.opacity = (v * 0.7).toFixed(2); }
   setBarrage(v) { this.el.barrageVeil.style.opacity = (v * 0.7).toFixed(2); }

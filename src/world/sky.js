@@ -77,6 +77,20 @@ export function setupSky(scene) {
       }
       clouds.update(dt);
     },
+    // darken the dome and dim the sun for rainy weather
+    setRain(on) {
+      if (on) {
+        uniforms.top.value.setHex(0x2f3336);
+        uniforms.bottom.value.setHex(0x565a5d);
+        sun.intensity = 0.45;
+        hemi.intensity = 0.6;
+      } else {
+        uniforms.top.value.setHex(WORLD.skyTop);
+        uniforms.bottom.value.setHex(WORLD.skyBottom);
+        sun.intensity = 1.0;
+        hemi.intensity = 0.95;
+      }
+    },
   };
 }
 
