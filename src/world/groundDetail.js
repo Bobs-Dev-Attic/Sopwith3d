@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIELD } from '../core/config.js';
+import { sampleHeight } from './terrain.js';
 
 // Dense, atmospheric battlefield dressing. Everything repeated hundreds of
 // times is an InstancedMesh (one draw call); only a few unique props (ruins,
@@ -17,6 +18,26 @@ function smokeTexture() {
   g.addColorStop(0.6, 'rgba(45,42,38,0.4)');
   g.addColorStop(1, 'rgba(30,28,24,0)');
   x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+// Denser, lumpier puff for the tall smoke columns so they read as solid plumes
+// rather than thin wisps. White core so the per-sprite tint sets the colour.
+function plumeTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  // a few overlapping soft blobs give a billowy edge
+  const blob = (cx, cy, r, a) => {
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(255,255,255,${a})`);
+    g.addColorStop(0.55, `rgba(255,255,255,${a * 0.85})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill();
+  };
+  blob(64, 64, 60, 0.95);
+  blob(46, 52, 34, 0.7);
+  blob(82, 70, 38, 0.7);
+  blob(58, 82, 30, 0.6);
   return new THREE.CanvasTexture(c);
 }
 
@@ -37,6 +58,7 @@ export default class GroundDetail {
     this._mats = [];
     this._textures = [];
     this._anim = { soldiers: null, vehicles: [], guns: [], fires: [] };
+    this._smokeCols = [];
     this._t = 0;
 
     this._soldierGeo = soldierGeo();
@@ -52,6 +74,7 @@ export default class GroundDetail {
     this._artillery();
     this._vehicles();
     this._fires();
+    this._smokeColumns();
     this._soldiers();   // animated, last
   }
 
@@ -353,6 +376,91 @@ export default class GroundDetail {
     this.root.add(ember); f.ember = ember;
   }
 
+  // ---- tall drifting smoke columns of varying sizes across the field ----
+  _smokeColumns() {
+    this._plumeTex = plumeTexture(); this._textures.push(this._plumeTex);
+    // each plume is tinted light at the foot (catching the smoke-lit ground)
+    // fading to dark soot at the crown, so it reads against both the dark
+    // ground below and the pale horizon above. A few greyer dust plumes vary it.
+    const palettes = [
+      { light: 0x8c8470, dark: 0x161310 }, // oily black
+      { light: 0x968d78, dark: 0x221d15 }, // brown coal smoke
+      { light: 0xa39a86, dark: 0x33302a }, // pale grey dust
+    ];
+    const count = Math.round(20 * FIELD);
+    for (let i = 0; i < count; i++) {
+      const x = (this.rng() - 0.5) * 9200 * FIELD;
+      const z = (this.rng() - 0.5) * 4400 * FIELD;
+      // squared bias => mostly modest plumes with a few towering ones
+      const size = 0.5 + this.rng() * this.rng() * 2.6;
+      const pal = palettes[(this.rng() * palettes.length) | 0];
+      this._buildSmokeColumn(x, z, size, pal);
+    }
+  }
+
+  _buildSmokeColumn(x, z, size, pal) {
+    const baseY = sampleHeight(x, z);
+    const height = 45 + size * 65;              // ~50 (wisp) to ~220 (towering)
+    const baseW = 9 + size * 8;
+    const puffs = Math.round(9 + size * 7);     // dense overlap => solid plume
+    const col = {
+      x, z, baseY, size, height, baseW,
+      rise: 7 + size * 4,                       // taller stacks billow up faster
+      leanX: 0.05 + (this.rng() - 0.5) * 0.08,  // sheared by the easterly wind
+      leanZ: (this.rng() - 0.5) * 0.06,
+      swayRate: 0.4 + this.rng() * 0.5,
+      maxOpacity: 0.85 + this.rng() * 0.15,
+      light: new THREE.Color(pal.light),
+      dark: new THREE.Color(pal.dark),
+      sprites: [],
+      ember: null,
+    };
+    for (let i = 0; i < puffs; i++) {
+      const m = new THREE.SpriteMaterial({
+        map: this._plumeTex, transparent: true, depthWrite: false, opacity: 0,
+      });
+      this._mats.push(m);
+      const sp = new THREE.Sprite(m);
+      sp.userData = { h: (i / puffs) * height, phase: this.rng() * Math.PI * 2 };
+      this.root.add(sp);
+      col.sprites.push(sp);
+    }
+    // a faint fire glow at the foot of the larger columns
+    if (size > 1.5) {
+      const em = new THREE.SpriteMaterial({
+        map: this._smokeTex, transparent: true, depthWrite: false, opacity: 0.4,
+        color: 0xc04a18, blending: THREE.AdditiveBlending,
+      });
+      this._mats.push(em);
+      const ember = new THREE.Sprite(em);
+      const es = 3 + size * 2;
+      ember.scale.set(es, es, 1);
+      ember.position.set(x, baseY + es * 0.4, z);
+      this.root.add(ember);
+      col.ember = ember;
+    }
+    this._smokeCols.push(col);
+    this._updateSmokeColumn(col, 0);          // initial placement
+  }
+
+  _updateSmokeColumn(c, dt) {
+    for (const sp of c.sprites) {
+      const d = sp.userData;
+      d.h += c.rise * dt;
+      if (d.h > c.height) d.h -= c.height;     // recycle (invisible at the seam)
+      const f = d.h / c.height;                // 0 at the base, 1 at the crown
+      const sway = Math.sin(this._t * c.swayRate + d.phase) * (1 + f * 3) * c.size;
+      sp.position.set(c.x + c.leanX * d.h + sway, c.baseY + d.h, c.z + c.leanZ * d.h);
+      const w = c.baseW * (0.5 + f * 1.8);     // narrow at the foot, broad plume up top
+      sp.scale.set(w, w, 1);
+      // light near the deck, darkening to soot up top
+      sp.material.color.copy(c.light).lerp(c.dark, f);
+      // fade in quickly off the deck, thin out toward the top so the loop hides
+      sp.material.opacity = c.maxOpacity * Math.min(1, f * 6) * (1 - f);
+    }
+    if (c.ember) c.ember.material.opacity = 0.3 + Math.sin(this._t * 7 + c.x) * 0.12;
+  }
+
   // ---- marching infantry (instanced, animated) ----
   _soldiers() {
     const N = 150 * FIELD;
@@ -436,6 +544,9 @@ export default class GroundDetail {
       }
       if (f.ember) f.ember.material.opacity = 0.35 + Math.sin(this._t * 8 + f.x) * 0.15;
     }
+
+    // tall drifting smoke columns
+    for (const c of this._smokeCols) this._updateSmokeColumn(c, dt);
   }
 
   dispose() {
