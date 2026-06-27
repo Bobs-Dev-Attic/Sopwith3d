@@ -11,6 +11,7 @@ import ChaseCamera from './chaseCamera.js';
 import { steerToward } from '../entities/steering.js';
 import AudioManager from '../audio/sound.js';
 import Environment from './environment.js';
+import BattlefieldAmbience from '../world/ambience.js';
 import Rain from '../fx/rain.js';
 import settings from './settings.js';
 import HUD from '../ui/hud.js';
@@ -57,6 +58,7 @@ export default class Game {
     this.chase = new ChaseCamera(camera);
     this.hud = new HUD();
     this.audio = new AudioManager();
+    this.ambience = new BattlefieldAmbience(scene, this.fx, this.audio);
 
     this.missions = new MissionManager({
       battlefield: this.battlefield,
@@ -130,6 +132,10 @@ export default class Game {
 
     this.input.setThrottle(PLANE.startThrottle);
     this.missions.start(missionIndex);
+    // battlefield chaos: shellfire, muzzle flashes & tracers (quiet sectors stay calm)
+    this.ambience.configure(this.battlefield.frontZ, this.battlefield.frontSpan);
+    this.ambience.reset();
+    this.ambience.active = !this.peaceful;
     this.hud.show();
     this.audio.unlock();
     this.audio.startMission();
@@ -406,6 +412,10 @@ export default class Game {
       this.projectiles.fire(mp, dir, 540, 'enemy', 7);
       this.audio.enemyGun(mp.distanceTo(this.plane.state.position));
     }, this.camera);
+
+    // --- battlefield chaos (shellfire, tracers, muzzle flashes) ---
+    this.ambience.setFocus(this.plane.state.position);
+    this.ambience.update(dt);
 
     // --- weapons & collisions ---
     const colliders = this._buildColliders();
