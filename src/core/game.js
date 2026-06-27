@@ -16,7 +16,7 @@ import settings from './settings.js';
 import HUD from '../ui/hud.js';
 import MissionManager, { MISSIONS } from '../ui/missions.js';
 import Clouds from '../world/clouds.js';
-import { PLANE, ENEMY, WORLD, FLAK, BARRAGE } from './config.js';
+import { PLANE, ENEMY, WORLD, FLAK, BARRAGE, FIELD } from './config.js';
 
 export default class Game {
   constructor(renderer, scene, camera) {
@@ -79,7 +79,7 @@ export default class Game {
     this.bombs.clear();
     this._rebuildBattlefield();
 
-    this.plane.reset(new THREE.Vector3(0, PLANE.startAltitude, 900), 0);
+    this.plane.reset(new THREE.Vector3(0, PLANE.startAltitude, 900 * FIELD), 0);
     this.chase.snap();
     this.kills = 0;
     this.groundKills = 0;

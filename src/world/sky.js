@@ -37,7 +37,7 @@ export function setupSky(scene) {
   });
   // Radius kept well inside the camera far plane so the dome is never clipped;
   // it follows the camera each frame so it always fills the view.
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(5000, 32, 20), skyMat);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(12000, 36, 24), skyMat);
   sky.renderOrder = -1;
   scene.add(sky);
 

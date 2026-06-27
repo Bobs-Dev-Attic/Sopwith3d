@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import GroundDetail from './groundDetail.js';
+import { FIELD } from '../core/config.js';
 
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, ...o });
 
@@ -55,12 +56,12 @@ export default class Battlefield {
     this._markerTex = beamTexture();
 
     // Front lines wander a little each sortie.
-    const frontZ = -240 - this.rng() * 80;
+    const frontZ = (-240 - this.rng() * 80) * FIELD;
     this._buildTrenchLine(frontZ);
-    this._buildTrenchLine(frontZ + 520);
-    this._buildTrenchLine(frontZ - 460);
-    this._scatterWire(frontZ + 80);
-    this._scatterWire(frontZ + 380);
+    this._buildTrenchLine(frontZ + 520 * FIELD);
+    this._buildTrenchLine(frontZ - 460 * FIELD);
+    this._scatterWire(frontZ + 80 * FIELD);
+    this._scatterWire(frontZ + 380 * FIELD);
     this._scatterTrees();
     this._placeNests();
     this._placeBunkers();
@@ -81,8 +82,10 @@ export default class Battlefield {
 
   // ---- trench line: a zig-zag of revetment walls + firing step ----
   _buildTrenchLine(z) {
-    const len = 9000;
-    const seg = 80;
+    // length grows with the field; the segment grows with it too so the trench
+    // stays the same number of meshes (keeps the draw-call count flat)
+    const len = 9000 * FIELD;
+    const seg = 80 * FIELD;
     const count = Math.floor(len / seg);
     for (let i = 0; i < count; i++) {
       const x = -len / 2 + i * seg;
@@ -115,9 +118,9 @@ export default class Battlefield {
     const postGeo = new THREE.CylinderGeometry(0.18, 0.18, 3, 5);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x2a2620, transparent: true, opacity: 0.6 });
     for (let row = 0; row < 3; row++) {
-      const zz = z + row * 22;
+      const zz = z + row * 22 * FIELD;
       const pts = [];
-      for (let x = -4200; x <= 4200; x += 42) {
+      for (let x = -4200 * FIELD; x <= 4200 * FIELD; x += 42 * FIELD) {
         const post = new THREE.Mesh(postGeo, M.bark);
         const h = 2.6 + rng() * 0.8;
         post.scale.y = h / 3;
@@ -132,9 +135,9 @@ export default class Battlefield {
 
   _scatterTrees() {
     const rng = rand(123 + this.seed);
-    for (let i = 0; i < 220; i++) {
-      const x = (rng() - 0.5) * 9500;
-      const z = (rng() - 0.5) * 9500;
+    for (let i = 0; i < 220 * FIELD; i++) {
+      const x = (rng() - 0.5) * 9500 * FIELD;
+      const z = (rng() - 0.5) * 9500 * FIELD;
       if (Math.abs(z) < 60) continue;
       const h = 4 + rng() * 9;
       const trunk = new THREE.Mesh(
@@ -152,10 +155,12 @@ export default class Battlefield {
   _placeNests() {
     // scatter machine-gun nests widely across the whole enemy frontage so the
     // objectives are spread out and you have to range across the lines
-    const count = 12 + Math.floor(this.rng() * 4);
+    // more nests over the bigger frontage, kept inside the combat radius so the
+    // objectives stay reachable without straying into the flak
+    const count = 16 + Math.floor(this.rng() * 8);
     for (let i = 0; i < count; i++) {
-      const x = (this.rng() - 0.5) * 5200;
-      const z = -200 - this.rng() * 1700;
+      const x = (this.rng() - 0.5) * 13000;
+      const z = -300 - this.rng() * 4200;
       this.mgNests.push(this._makeNest(x, z));
     }
   }
@@ -225,10 +230,10 @@ export default class Battlefield {
   }
 
   _placeBunkers() {
-    const count = 4 + Math.floor(this.rng() * 2);
+    const count = 6 + Math.floor(this.rng() * 4);
     const spots = [];
     for (let i = 0; i < count; i++) {
-      spots.push([(this.rng() - 0.5) * 2400, 180 + this.rng() * 360]);
+      spots.push([(this.rng() - 0.5) * 7200, (180 + this.rng() * 360) * FIELD]);
     }
     for (const [x, z] of spots) {
       const g = new THREE.Group();
@@ -259,10 +264,10 @@ export default class Battlefield {
   }
 
   _placeBalloons() {
-    const count = 3 + Math.floor(this.rng() * 2);
+    const count = 5 + Math.floor(this.rng() * 3);
     const spots = [];
     for (let i = 0; i < count; i++) {
-      spots.push([(this.rng() - 0.5) * 2600, -650 - this.rng() * 650]);
+      spots.push([(this.rng() - 0.5) * 7800, (-650 - this.rng() * 650) * FIELD]);
     }
     for (const [x, z] of spots) {
       const g = new THREE.Group();

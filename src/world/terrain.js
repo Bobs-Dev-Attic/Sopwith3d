@@ -45,24 +45,24 @@ function groundTexture() {
 
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(44, 44);
+  t.repeat.set(132, 132);
   t.anisotropy = 8;
   return t;
 }
 
 export function buildTerrain(scene) {
   const size = WORLD.groundSize;
-  const seg = 160;
+  const seg = 280;                       // more segments to keep detail on the bigger plane
   const geo = new THREE.PlaneGeometry(size, size, seg, seg);
   geo.rotateX(-Math.PI / 2);
 
   const rng = mulberry32(42);
-  // a handful of big craters carved into the no-man's-land band
+  // big craters carved into the (now wider) no-man's-land band
   const craters = [];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 170; i++) {
     craters.push({
       x: (rng() - 0.5) * size * 0.7,
-      z: (rng() - 0.5) * 600, // clustered around the central scar
+      z: (rng() - 0.5) * 1800,  // clustered around the central scar
       r: 30 + rng() * 80,
       d: 4 + rng() * 9,
     });
@@ -95,7 +95,7 @@ export function buildTerrain(scene) {
     pos.setY(i, y);
 
     // colour by region: central scar = churned mud, outer = scrubby field
-    const scar = THREE.MathUtils.clamp(1 - Math.abs(z) / 700, 0, 1);
+    const scar = THREE.MathUtils.clamp(1 - Math.abs(z) / 2100, 0, 1);
     tmp.copy(cField).lerp(cMud, scar * 0.7).lerp(cScar, scar * 0.5);
     // a little per-vertex grime
     const n = 0.85 + rng() * 0.3;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { FIELD } from '../core/config.js';
 
 // Dense, atmospheric battlefield dressing. Everything repeated hundreds of
 // times is an InstancedMesh (one draw call); only a few unique props (ruins,
@@ -91,7 +92,7 @@ export default class GroundDetail {
     const geo = new THREE.CylinderGeometry(0.35, 0.6, 3, 5);
     geo.translate(0, 1.5, 0);
     // jagged top by shearing a couple verts
-    const list = this._scatter(150, (r) => (r - 0.5) * 9000, (r) => (r - 0.5) * 9000,
+    const list = this._scatter(150 * FIELD, (r) => (r - 0.5) * 9000 * FIELD, (r) => (r - 0.5) * 9000 * FIELD,
       (r) => 0.5 + r * 1.1);
     list.forEach((it) => { it.rz = (this.rng() - 0.5) * 0.4; });
     this._instanced(geo, this._M(0x2c2418), list, { cast: true });
@@ -102,7 +103,7 @@ export default class GroundDetail {
     const geo = new THREE.CircleGeometry(1, 12);
     geo.rotateX(-Math.PI / 2);
     // dense cratering, heaviest through the churned central ground
-    const list = this._scatter(190, (r) => (r - 0.5) * 8000, (r) => (r - 0.5) * 3400,
+    const list = this._scatter(190 * FIELD, (r) => (r - 0.5) * 8000 * FIELD, (r) => (r - 0.5) * 3400 * FIELD,
       (r) => 6 + r * 26);
     list.forEach((it) => { it.p.y = 0.15; });
     this._instanced(geo, this._M(0x1d190f, { roughness: 1 }), list, { cast: false });
@@ -113,9 +114,9 @@ export default class GroundDetail {
     const geo = new THREE.BoxGeometry(1.6, 0.7, 1.0);
     const list = [];
     // clustered into short walls
-    for (let w = 0; w < 36; w++) {
-      const bx = (this.rng() - 0.5) * 4000;
-      const bz = -200 - this.rng() * 700;
+    for (let w = 0; w < 36 * FIELD; w++) {
+      const bx = (this.rng() - 0.5) * 4000 * FIELD;
+      const bz = (-200 - this.rng() * 700) * FIELD;
       const ang = this.rng() * Math.PI;
       const len = 3 + Math.floor(this.rng() * 5);
       for (let i = 0; i < len; i++) {
@@ -134,11 +135,11 @@ export default class GroundDetail {
     postGeo.translate(0, 1.3, 0);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x2a2620, transparent: true, opacity: 0.5 });
     this._mats.push(lineMat);
-    for (let b = 0; b < 4; b++) {
-      const z = -120 - this.rng() * 500;
+    for (let b = 0; b < 4 * FIELD; b++) {
+      const z = (-120 - this.rng() * 500) * FIELD;
       const posts = [];
       const pts = [];
-      for (let x = -3500; x <= 3500; x += 45) {
+      for (let x = -3500 * FIELD; x <= 3500 * FIELD; x += 45) {
         posts.push({ p: new THREE.Vector3(x, 0, z + (this.rng() - 0.5) * 8) });
         pts.push(new THREE.Vector3(x, 1.4 + Math.sin(x * 0.7) * 0.4, z));
       }
@@ -150,7 +151,7 @@ export default class GroundDetail {
 
   // ---- the fallen, prone in the mud ----
   _deadBodies() {
-    const list = this._scatter(110, (r) => (r - 0.5) * 6000, (r) => (r - 0.5) * 1600, () => 1);
+    const list = this._scatter(110 * FIELD, (r) => (r - 0.5) * 6000 * FIELD, (r) => (r - 0.5) * 1600 * FIELD, () => 1);
     list.forEach((it) => { it.p.y = 0.15; it.rx = Math.PI / 2; it.rz = (this.rng() - 0.5) * 0.6; });
     this._instanced(this._soldierGeo, this._M(0x4a4636), list, { cast: false });
   }
@@ -160,9 +161,9 @@ export default class GroundDetail {
     const geo = new THREE.SphereGeometry(0.35, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2);
     const list = [];
     const signs = [];
-    for (let f = 0; f < 6; f++) {
-      const cx = (this.rng() - 0.5) * 5000;
-      const cz = -150 - this.rng() * 900;
+    for (let f = 0; f < 6 * FIELD; f++) {
+      const cx = (this.rng() - 0.5) * 5000 * FIELD;
+      const cz = (-150 - this.rng() * 900) * FIELD;
       for (let i = 0; i < 26; i++) {
         list.push({ p: new THREE.Vector3(cx + (this.rng() - 0.5) * 160, 0.1, cz + (this.rng() - 0.5) * 160) });
       }
@@ -181,9 +182,9 @@ export default class GroundDetail {
     const crates = [];
     const barrels = [];
     const tents = [];
-    for (let d = 0; d < 6; d++) {
-      const cx = (this.rng() - 0.5) * 4200;
-      const cz = 200 + this.rng() * 700; // friendly rear
+    for (let d = 0; d < 6 * FIELD; d++) {
+      const cx = (this.rng() - 0.5) * 4200 * FIELD;
+      const cz = (200 + this.rng() * 700) * FIELD; // friendly rear
       for (let i = 0; i < 14; i++) {
         const x = cx + (this.rng() - 0.5) * 26, z = cz + (this.rng() - 0.5) * 26;
         const stack = this.rng() > 0.6 ? 2 : 1;
@@ -207,10 +208,10 @@ export default class GroundDetail {
   _ruins() {
     const stone = this._M(0x6a6358);
     const stoneDark = this._M(0x4c4640);
-    for (let b = 0; b < 9; b++) {
+    for (let b = 0; b < 9 * FIELD; b++) {
       const g = new THREE.Group();
-      const x = (this.rng() - 0.5) * 7000;
-      const z = (this.rng() - 0.5) * 4000;
+      const x = (this.rng() - 0.5) * 7000 * FIELD;
+      const z = (this.rng() - 0.5) * 4000 * FIELD;
       g.position.set(x, 0, z);
       g.rotation.y = this.rng() * Math.PI;
       const w = 6 + this.rng() * 6, d = 5 + this.rng() * 5;
@@ -245,10 +246,10 @@ export default class GroundDetail {
   _artillery() {
     const metal = this._M(0x3a3a32, { metalness: 0.4, roughness: 0.6 });
     const wood = this._M(0x4a3a22);
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 5 * FIELD; i++) {
       const g = new THREE.Group();
-      const x = (this.rng() - 0.5) * 4000;
-      const z = 260 + this.rng() * 800;
+      const x = (this.rng() - 0.5) * 4000 * FIELD;
+      const z = (260 + this.rng() * 800) * FIELD;
       g.position.set(x, 0, z);
       g.rotation.y = Math.PI + (this.rng() - 0.5) * 0.6; // aimed toward the front
       // wheels
@@ -298,22 +299,22 @@ export default class GroundDetail {
     };
     const make = (g, behindLines) => {
       const dir = this.rng() > 0.5 ? 1 : -1;
-      const z = behindLines ? (300 + this.rng() * 600) : (-100 - this.rng() * 400);
-      g.position.set((this.rng() - 0.5) * 5000, 0, z);
+      const z = (behindLines ? (300 + this.rng() * 600) : (-100 - this.rng() * 400)) * FIELD;
+      g.position.set((this.rng() - 0.5) * 5000 * FIELD, 0, z);
       g.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
       this.root.add(g);
       this._anim.vehicles.push({ g, dir, speed: 8 + this.rng() * 14, z });
     };
-    for (let i = 0; i < 4; i++) make(mkTruck(), true);
-    for (let i = 0; i < 2; i++) make(mkTank(), false);
+    for (let i = 0; i < 4 * FIELD; i++) make(mkTruck(), true);
+    for (let i = 0; i < 2 * FIELD; i++) make(mkTank(), false);
   }
 
   // ---- smouldering fires (smoke columns) ----
   _fires() {
     this._smokeTex = smokeTexture(); this._textures.push(this._smokeTex);
     // lots of standalone fires across the field (ruins add more on top)
-    for (let i = 0; i < 18; i++) {
-      this.addFire((this.rng() - 0.5) * 8000, (this.rng() - 0.5) * 3800, 0.8 + this.rng() * 0.7);
+    for (let i = 0; i < 18 * FIELD; i++) {
+      this.addFire((this.rng() - 0.5) * 8000 * FIELD, (this.rng() - 0.5) * 3800 * FIELD, 0.8 + this.rng() * 0.7);
     }
     // ruins flagged fires built earlier
     const pending = this._anim.fires.filter((f) => !f.sprites);
@@ -354,14 +355,14 @@ export default class GroundDetail {
 
   // ---- marching infantry (instanced, animated) ----
   _soldiers() {
-    const N = 150;
+    const N = 150 * FIELD;
     const im = new THREE.InstancedMesh(this._soldierGeo, this._M(0x5b5a44), N);
     im.castShadow = false; im.receiveShadow = false;
     const troops = [];
     for (let i = 0; i < N; i++) {
       // columns advancing across no-man's-land toward the front (−z)
-      const x = (this.rng() - 0.5) * 6000;
-      const z = 300 - this.rng() * 1100;
+      const x = (this.rng() - 0.5) * 6000 * FIELD;
+      const z = (300 - this.rng() * 1100) * FIELD;
       troops.push({
         x, z, heading: this.rng() > 0.15 ? -1 : 1, // most advance, some retreat
         speed: 1.2 + this.rng() * 1.6,
@@ -382,8 +383,8 @@ export default class GroundDetail {
     for (let i = 0; i < troops.length; i++) {
       const t = troops[i];
       t.z += t.heading * t.speed * dt;
-      if (t.z < -1200) t.z = 320;
-      if (t.z > 340) t.z = -1180;
+      if (t.z < -1200 * FIELD) t.z = 320 * FIELD;
+      if (t.z > 340 * FIELD) t.z = -1180 * FIELD;
       t.phase += dt * 6;
       const bob = Math.abs(Math.sin(t.phase)) * 0.18;        // marching bob
       const sway = Math.sin(t.phase) * 0.12;
@@ -404,8 +405,8 @@ export default class GroundDetail {
     // vehicles roll along their lane and loop across the field
     for (const veh of this._anim.vehicles) {
       veh.g.position.x += veh.dir * veh.speed * dt;
-      if (veh.g.position.x > 5200) veh.g.position.x = -5200;
-      if (veh.g.position.x < -5200) veh.g.position.x = 5200;
+      if (veh.g.position.x > 5200 * FIELD) veh.g.position.x = -5200 * FIELD;
+      if (veh.g.position.x < -5200 * FIELD) veh.g.position.x = 5200 * FIELD;
     }
 
     // artillery: count down, flash + recoil + smoke when firing

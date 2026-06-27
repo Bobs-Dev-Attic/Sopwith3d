@@ -1,27 +1,31 @@
 // Central tuning for the whole sim. Units are loose "game units"; the HUD
 // scales them into period-flavoured ft / mph for readout only.
 
+// How big the battlefield is, relative to the original. Scatter ranges, the
+// terrain, the combat radius, the fog and the cloud field all scale by this.
+export const FIELD = 3;
+
 export const WORLD = {
-  groundSize: 11000,      // battlefield extent (square) — large open arena
+  groundSize: 11000 * FIELD,  // battlefield extent (square)
   fogColor: 0x9a9488,     // hazy, overcast horizon
-  fogNear: 900,
-  fogFar: 6200,
+  fogNear: 1100,
+  fogFar: 11000,
   skyTop: 0x3a3d42,       // bruised grey storm sky
   skyBottom: 0xb8b0a0,    // pale smoke-lit horizon
   gravity: 9.8,
   seaLevel: 0,
   // soft patrol boundary: beyond `combatRadius` the plane is eased back toward
   // the action (with a warning) rather than letting you fly off into the fog
-  combatRadius: 3000,
-  boundaryBand: 1400,     // how far past the radius the turn-back ramps to full
+  combatRadius: 3000 * FIELD,
+  boundaryBand: 1400 * FIELD,  // how far past the radius the turn-back ramps to full
 };
 
 // Fly-through cloud field.
 export const CLOUDS = {
-  count: 30,
+  count: 30 * FIELD,
   minAlt: 160,
   maxAlt: 620,
-  spread: 5200,           // horizontal scatter radius
+  spread: 5200 * FIELD,   // horizontal scatter radius
   puffsPer: 9,
   cloudRadius: 95,        // whiteout / fly-through radius
   drift: 5,               // slow easterly drift
@@ -38,8 +42,8 @@ export const FLAK = {
 
 // What happens when you desert — flee well past the boundary.
 export const BARRAGE = {
-  start: 1400,            // metres beyond combatRadius where the barrage opens up
-  full: 1200,             // further out again => full intensity
+  start: 1400 * FIELD,    // metres beyond combatRadius where the barrage opens up
+  full: 1200 * FIELD,     // further out again => full intensity
   fuelDrain: 26,          // %/sec fuel burned while deserting (forces you down)
   flakPerSec: 5,
   tracersPerSec: 14,
