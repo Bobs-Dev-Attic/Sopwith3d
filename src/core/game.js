@@ -18,6 +18,19 @@ import MissionManager, { MISSIONS } from '../ui/missions.js';
 import Clouds from '../world/clouds.js';
 import { PLANE, ENEMY, WORLD, FLAK, BARRAGE, FIELD } from './config.js';
 
+// score, blast size, debris count and HUD banner per ground-target type
+const GROUND_KILL = {
+  balloon:  { pts: 75, blast: 2.8, debris: 0,  label: 'BALLOON BURST' },
+  bunker:   { pts: 60, blast: 3.2, debris: 0,  label: 'BUNKER FLATTENED' },
+  mgnest:   { pts: 40, blast: 2.2, debris: 0,  label: 'NEST SILENCED' },
+  battery:  { pts: 90, blast: 3.6, debris: 16, label: 'BATTERY KNOCKED OUT' },
+  tank:     { pts: 70, blast: 2.8, debris: 14, label: 'TANK BREWED UP' },
+  truck:    { pts: 50, blast: 2.4, debris: 10, label: 'TRUCK DESTROYED' },
+  barracks: { pts: 80, blast: 3.4, debris: 12, label: 'BARRACKS RAZED' },
+  train:    { pts: 120, blast: 4.0, debris: 20, label: 'SUPPLY TRAIN WRECKED' },
+  default:  { pts: 40, blast: 2.2, debris: 0,  label: 'TARGET DESTROYED' },
+};
+
 export default class Game {
   constructor(renderer, scene, camera) {
     this.renderer = renderer;
@@ -570,15 +583,17 @@ export default class Game {
       if (!t.alive && !t._counted) {
         t._counted = true;
         this.groundKills++;
-        const pts = t.type === 'balloon' ? 75 : t.type === 'bunker' ? 60 : 40;
-        this._award(pts);
+        const info = GROUND_KILL[t.type] || GROUND_KILL.default;
+        this._award(info.pts);
+        this.hud.banner(`${info.label}  +${info.pts}`);
         if (t.type === 'balloon') {
           // a fireball aloft, raining debris
           this.fx.explosion(t.pos, 2.8);
           this.debris.burst(t.pos, 18, { spread: 16, up: 6 });
           this.audio.explosion(2.0);
         } else {
-          this._groundExplosion(t.pos, t.type === 'bunker' ? 3.2 : 2.2);
+          this._groundExplosion(t.pos, info.blast);
+          if (info.debris) this.debris.burst(t.pos, info.debris, { spread: 14, up: 8 });
         }
       }
     }

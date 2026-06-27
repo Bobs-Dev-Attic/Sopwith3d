@@ -94,6 +94,55 @@ export const MISSIONS = [
       };
     },
   },
+  {
+    no: 'SORTIE IV',
+    name: 'Counter-Battery',
+    desc: 'Enemy field guns are shelling our trenches from the rear. Find and knock out three artillery batteries — bombs or sustained fire will do it.',
+    begin(ctx) {
+      const need = 3;
+      const targets = ctx.battlefield.batteries.slice(0, Math.max(need, 3));
+      targets.forEach((t) => ctx.battlefield.markObjective(t));
+      return {
+        text: () => `Knock out batteries  ${killed(targets)}/${need}`,
+        isWon: () => killed(targets) >= need,
+        targets,
+        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+      };
+    },
+  },
+  {
+    no: 'SORTIE V',
+    name: 'Armoured Column',
+    desc: 'An armoured column is massing for an attack. Strafe and bomb the laagers — destroy five vehicles, tanks or trucks.',
+    begin(ctx) {
+      const need = 5;
+      const targets = ctx.battlefield.armor.slice();
+      targets.forEach((t) => ctx.battlefield.markObjective(t));
+      return {
+        text: () => `Destroy vehicles  ${killed(targets)}/${need}`,
+        isWon: () => killed(targets) >= need,
+        targets,
+        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+      };
+    },
+  },
+  {
+    no: 'SORTIE VI',
+    name: 'Raid the Railhead',
+    desc: 'Cut the enemy supply line. Wreck the supply trains at the railhead and burn out their barracks — destroy a train and two barracks.',
+    begin(ctx) {
+      const trains = ctx.battlefield.railyards.slice(0, 1);
+      const huts = ctx.battlefield.barracks.slice(0, 2);
+      const targets = [...trains, ...huts];
+      targets.forEach((t) => ctx.battlefield.markObjective(t));
+      return {
+        text: () => `Train ${killed(trains)}/1 · Barracks ${killed(huts)}/2`,
+        isWon: () => trains.every((t) => !t.alive) && huts.every((t) => !t.alive),
+        targets,
+        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+      };
+    },
+  },
 ];
 
 const killed = (arr) => arr.filter((t) => !t.alive).length;

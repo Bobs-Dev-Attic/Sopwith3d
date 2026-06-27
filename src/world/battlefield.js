@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import GroundDetail from './groundDetail.js';
-import { FIELD } from '../core/config.js';
+import { FIELD, WORLD } from '../core/config.js';
+import { sampleHeight } from './terrain.js';
 
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, ...o });
 
@@ -53,6 +54,10 @@ export default class Battlefield {
     this.mgNests = [];
     this.bunkers = [];
     this.balloons = [];
+    this.batteries = [];   // artillery batteries (clusters of field guns)
+    this.armor = [];       // tanks & trucks of an armoured column
+    this.barracks = [];    // hutted camps behind the lines
+    this.railyards = [];    // supply trains in the rail head
     this._markerTex = beamTexture();
 
     // Front lines wander a little each sortie.
@@ -63,9 +68,14 @@ export default class Battlefield {
     this._scatterWire(frontZ + 80 * FIELD);
     this._scatterWire(frontZ + 380 * FIELD);
     this._scatterTrees();
+    this._buildRailroad();
     this._placeNests();
     this._placeBunkers();
     this._placeBalloons();
+    this._placeBatteries();
+    this._placeArmor();
+    this._placeBarracks();
+    this._placeRailyards();
 
     // dense atmospheric dressing (instanced + a few animated props)
     this.detail = new GroundDetail(this.root, this.rng, this.fx);
@@ -77,7 +87,17 @@ export default class Battlefield {
   }
 
   get targets() {
-    return [...this.mgNests, ...this.bunkers, ...this.balloons];
+    return [
+      ...this.mgNests, ...this.bunkers, ...this.balloons,
+      ...this.batteries, ...this.armor, ...this.barracks, ...this.railyards,
+    ];
+  }
+
+  // drop a group onto the terrain and return the ground height there
+  _seat(group, x, z) {
+    const y = sampleHeight(x, z);
+    group.position.set(x, y, z);
+    return y;
   }
 
   // ---- trench line: a zig-zag of revetment walls + firing step ----
@@ -167,7 +187,7 @@ export default class Battlefield {
 
   _makeNest(x, z) {
     const g = new THREE.Group();
-    g.position.set(x, 0, z);
+    const gy = this._seat(g, x, z);
     // sandbag ring
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.6, 2.4, 12, 1, true), M.sandbag);
     ring.position.y = 1.2;
@@ -188,7 +208,7 @@ export default class Battlefield {
     g.add(mount);
     this.root.add(g);
 
-    const t = new GroundTarget('mgnest', g, new THREE.Vector3(x, 1.5, z), 6, 60);
+    const t = new GroundTarget('mgnest', g, new THREE.Vector3(x, gy + 1.5, z), 6, 60);
     t.mount = mount;
     t.barrel = barrel;
     t.cooldown = 1 + Math.random();
@@ -237,7 +257,7 @@ export default class Battlefield {
     }
     for (const [x, z] of spots) {
       const g = new THREE.Group();
-      g.position.set(x, 0, z);
+      const gy = this._seat(g, x, z);
       const body = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 10), M.sandbagDark);
       body.position.y = 2.5;
       body.castShadow = body.receiveShadow = true;
@@ -252,7 +272,7 @@ export default class Battlefield {
         g.add(sb);
       }
       this.root.add(g);
-      const t = new GroundTarget('bunker', g, new THREE.Vector3(x, 2.5, z), 9, 100);
+      const t = new GroundTarget('bunker', g, new THREE.Vector3(x, gy + 2.5, z), 9, 100);
       t.onDestroyed = () => {
         body.material = M.bark;
         roof.rotation.z = 0.3;
@@ -271,7 +291,7 @@ export default class Battlefield {
     }
     for (const [x, z] of spots) {
       const g = new THREE.Group();
-      g.position.set(x, 0, z);
+      this._seat(g, x, z);
       const envelope = new THREE.Mesh(
         new THREE.SphereGeometry(14, 16, 12),
         mat(0x8a7a4a, { roughness: 0.8 })
@@ -314,6 +334,213 @@ export default class Battlefield {
         envelope.material = mat(0x2a241a);
       };
       this.balloons.push(t);
+    }
+  }
+
+  // ---- artillery batteries: clusters of field guns behind sandbag berms ----
+  _placeBatteries() {
+    const count = 4 + Math.floor(this.rng() * 3);
+    for (let b = 0; b < count; b++) {
+      const cx = (this.rng() - 0.5) * 11000;
+      const cz = (260 + this.rng() * 900) * FIELD; // enemy rear
+      const g = new THREE.Group();
+      const gy = this._seat(g, cx, cz);
+      const facing = Math.PI + (this.rng() - 0.5) * 0.5;
+      // sandbag berm
+      const berm = new THREE.Mesh(new THREE.CylinderGeometry(11, 12, 1.4, 16, 1, true), M.sandbag);
+      berm.position.y = 0.7; g.add(berm);
+      // a row of three guns
+      for (let i = 0; i < 3; i++) {
+        const gun = new THREE.Group();
+        gun.position.set(-7 + i * 7, 0, 0);
+        gun.rotation.y = facing;
+        for (const sx of [-1.2, 1.2]) {
+          const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.3, 10), M.wood);
+          wheel.rotation.z = Math.PI / 2; wheel.position.set(sx, 1.1, 0); gun.add(wheel);
+        }
+        const trail = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 4), M.metal);
+        trail.position.set(0, 0.5, 2.2); gun.add(trail);
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 5.5, 10), M.metal);
+        barrel.rotation.x = Math.PI / 2 - 0.3; barrel.position.set(0, 1.7, -1.8); gun.add(barrel);
+        g.add(gun);
+      }
+      // ammo crates
+      for (let i = 0; i < 4; i++) {
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), M.plank);
+        crate.position.set(6 + (this.rng() - 0.5) * 3, 0.6, -4 + (this.rng() - 0.5) * 4);
+        g.add(crate);
+      }
+      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      this.root.add(g);
+      const t = new GroundTarget('battery', g, new THREE.Vector3(cx, gy + 2, cz), 13, 150);
+      t.onDestroyed = () => {
+        g.rotation.z = (this.rng() - 0.5) * 0.2;
+        if (this.detail) {
+          this.detail.addFire(cx, cz, 1.6);
+          this.detail.addFire(cx + 5, cz + 4, 1.0);
+        }
+      };
+      this.batteries.push(t);
+    }
+  }
+
+  // ---- armoured column: tanks & trucks parked along a track ----
+  _placeArmor() {
+    const olive = M.olive || (M.olive = mat(0x434832));
+    const dark = M.armorDark || (M.armorDark = mat(0x2a2c20));
+    const tyre = mat(0x18160f);
+    const mkTruck = (g) => {
+      const bed = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 5), olive); bed.position.y = 1.4; g.add(bed);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 1.8), dark); cab.position.set(0, 1.7, -2.2); g.add(cab);
+      const tilt = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 3), M.canvas); tilt.position.set(0, 2.7, 0.6); g.add(tilt);
+      for (const sx of [-1.1, 1.1]) for (const sz of [-1.8, 1.8]) {
+        const w = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 8), tyre);
+        w.rotation.z = Math.PI / 2; w.position.set(sx, 0.6, sz); g.add(w);
+      }
+    };
+    const mkTank = (g) => {
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.6, 6), olive); hull.position.y = 1.2; g.add(hull);
+      const turret = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.1, 2.4), dark); turret.position.y = 2.3; g.add(turret);
+      const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 3.6, 8), dark);
+      gun.rotation.x = Math.PI / 2; gun.position.set(0, 2.3, -2.4); g.add(gun);
+      for (const sx of [-1.7, 1.7]) {
+        const track = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.3, 6.2), M.metal);
+        track.position.set(sx, 0.65, 0); g.add(track);
+      }
+    };
+    // a couple of laagers (parking groups), each a mix of tanks & trucks
+    const laagers = 2 + Math.floor(this.rng() * 2);
+    for (let L = 0; L < laagers; L++) {
+      const lx = (this.rng() - 0.5) * 10000;
+      const lz = (120 + this.rng() * 1000) * FIELD;
+      const n = 3 + Math.floor(this.rng() * 3);
+      for (let i = 0; i < n; i++) {
+        const isTank = this.rng() > 0.55;
+        const g = new THREE.Group();
+        const x = lx + (this.rng() - 0.5) * 70;
+        const z = lz + (this.rng() - 0.5) * 50;
+        const gy = this._seat(g, x, z);
+        g.rotation.y = this.rng() > 0.5 ? Math.PI / 2 : -Math.PI / 2;
+        g.rotation.y += (this.rng() - 0.5) * 0.3;
+        if (isTank) mkTank(g); else mkTruck(g);
+        g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+        this.root.add(g);
+        const t = new GroundTarget(isTank ? 'tank' : 'truck', g,
+          new THREE.Vector3(x, gy + 1.5, z), isTank ? 6 : 5, isTank ? 90 : 55);
+        t.onDestroyed = () => {
+          g.children.forEach((c) => { c.rotation.z += (this.rng() - 0.5) * 0.5; });
+          if (this.detail) this.detail.addFire(x, z, isTank ? 1.2 : 0.9);
+        };
+        this.armor.push(t);
+      }
+    }
+  }
+
+  // ---- barracks: hutted camps behind the rear ----
+  _placeBarracks() {
+    const count = 3 + Math.floor(this.rng() * 3);
+    for (let b = 0; b < count; b++) {
+      const cx = (this.rng() - 0.5) * 9000;
+      const cz = (500 + this.rng() * 1100) * FIELD;
+      const g = new THREE.Group();
+      const gy = this._seat(g, cx, cz);
+      g.rotation.y = this.rng() * Math.PI;
+      const rows = 2, per = 2 + Math.floor(this.rng() * 2);
+      for (let r = 0; r < rows; r++) {
+        for (let i = 0; i < per; i++) {
+          const hut = new THREE.Group();
+          hut.position.set(-((per - 1) * 7) / 2 + i * 7, 0, -8 + r * 16);
+          const wall = new THREE.Mesh(new THREE.BoxGeometry(6, 2.6, 9), M.plank);
+          wall.position.y = 1.3; hut.add(wall);
+          const roof = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 9.2, 8, 1, false, 0, Math.PI), M.canvas);
+          roof.rotation.z = Math.PI / 2; roof.rotation.y = Math.PI / 2; roof.position.y = 2.6;
+          hut.add(roof);
+          g.add(hut);
+        }
+      }
+      // a flagpole / central post
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 7, 5), M.bark);
+      pole.position.set(0, 3.5, 0); g.add(pole);
+      g.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+      this.root.add(g);
+      const t = new GroundTarget('barracks', g, new THREE.Vector3(cx, gy + 2, cz), 14, 120);
+      t.onDestroyed = () => {
+        g.traverse((o) => { if (o.isMesh && o.geometry.type !== 'CylinderGeometry') o.material = M.bark; });
+        if (this.detail) { this.detail.addFire(cx, cz, 1.5); this.detail.addFire(cx + 6, cz - 5, 1.1); }
+      };
+      this.barracks.push(t);
+    }
+  }
+
+  // ---- railroad: a long track with a parked supply train at a railhead ----
+  _buildRailroad() {
+    const rail = M.rail || (M.rail = mat(0x35332c, { metalness: 0.4, roughness: 0.6 }));
+    const tie = M.tie || (M.tie = mat(0x2a2218));
+    // the line runs along z behind the lines, wandering a little
+    this._railX = (this.rng() - 0.5) * 6000;
+    const x0 = this._railX;
+    const len = WORLD.groundSize * 0.9;
+    const ties = [];
+    const railL = [];
+    const railR = [];
+    const gauge = 2.2;
+    const tieGeo = new THREE.BoxGeometry(5, 0.3, 0.7);
+    const step = 6;
+    for (let z = -len / 2; z <= len / 2; z += step) {
+      const x = x0 + Math.sin(z * 0.0004) * 400;
+      const y = sampleHeight(x, z) + 0.2;
+      ties.push({ p: new THREE.Vector3(x, y, z), ry: 0 });
+      railL.push(new THREE.Vector3(x - gauge / 2, y + 0.35, z));
+      railR.push(new THREE.Vector3(x + gauge / 2, y + 0.35, z));
+    }
+    // ties as one instanced mesh
+    const im = new THREE.InstancedMesh(tieGeo, tie, ties.length);
+    const mtx = new THREE.Matrix4();
+    ties.forEach((t, i) => { mtx.makeTranslation(t.p.x, t.p.y, t.p.z); im.setMatrixAt(i, mtx); });
+    im.instanceMatrix.needsUpdate = true;
+    im.receiveShadow = true;
+    this.root.add(im);
+    // the two rails as tube-ish lines
+    const railMat = new THREE.LineBasicMaterial({ color: 0x6a6660 });
+    this.root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(railL), railMat));
+    this.root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(railR), railMat));
+    this._rail = rail;
+  }
+
+  // a supply train (loco + wagons) parked on the line — a juicy target
+  _placeRailyards() {
+    const count = 2 + Math.floor(this.rng() * 2);
+    const steel = M.rail;
+    const olive = M.olive || (M.olive = mat(0x434832));
+    for (let r = 0; r < count; r++) {
+      const z0 = (this.rng() - 0.5) * WORLD.groundSize * 0.5;
+      const x = this._railX + Math.sin(z0 * 0.0004) * 400;
+      const g = new THREE.Group();
+      const gy = this._seat(g, x, z0);
+      // locomotive
+      const loco = new THREE.Group();
+      const boiler = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 6, 12), steel);
+      boiler.rotation.x = Math.PI / 2; boiler.position.set(0, 1.8, -1); loco.add(boiler);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.6, 2.6), M.metal); cab.position.set(0, 2.2, 3); loco.add(cab);
+      const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.6, 8), steel); stack.position.set(0, 3.4, -3.4); loco.add(stack);
+      loco.position.set(0, 0, 0); g.add(loco);
+      // a few wagons trailing along +z
+      const wagons = 3 + Math.floor(this.rng() * 3);
+      for (let i = 0; i < wagons; i++) {
+        const wag = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 6.5), i % 2 ? olive : M.plank);
+        wag.position.set(0, 1.6, 8 + i * 7.2); g.add(wag);
+      }
+      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      this.root.add(g);
+      const t = new GroundTarget('train', g, new THREE.Vector3(x, gy + 2, z0), 14, 130);
+      t.onDestroyed = () => {
+        g.children.forEach((c, i) => { c.rotation.z += (this.rng() - 0.5) * 0.3; c.position.y -= 0.3; });
+        if (this.detail) {
+          this.detail.addFire(x, z0, 1.8);
+          this.detail.addFire(x, z0 + 9, 1.2);
+        }
+      };
+      this.railyards.push(t);
     }
   }
 
