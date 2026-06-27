@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HUD_SCALE } from '../core/config.js';
 import Minimap from './minimap.js';
+import { styleFor } from './targetStyles.js';
 
 // Sweep of a 270° dial face with evenly spaced tick marks.
 function faceSVG(majorTicks) {
@@ -84,13 +85,15 @@ export default class HUD {
     this.minimap.update(dt, plane.state.position, plane.state.quaternion, enemies, groundTargets, objectives);
   }
 
-  // Edge arrows pointing toward off-screen objective positions.
-  updateArrows(positions, camera) {
+  // Edge arrows pointing toward off-screen objectives. Each mark is
+  // { pos, type } so the arrow is coloured and tagged per target type.
+  updateArrows(marks, camera) {
     const W = window.innerWidth, H = window.innerHeight;
     const cx = W / 2, cy = H / 2;
     const mx = cx - 30, my = cy - 30;     // inset rectangle the arrows ride
     let used = 0;
-    for (const pos of positions) {
+    for (const mark of marks) {
+      const pos = mark.pos || mark;       // tolerate bare Vector3 just in case
       this._proj.copy(pos).project(camera);
       let x = this._proj.x, y = this._proj.y;
       const behind = this._proj.z > 1;
@@ -101,21 +104,30 @@ export default class HUD {
       const sx = cx + x * mx;
       const sy = cy - y * my;
       const a = this._arrow(used++);
+      const st = styleFor(mark.type);
       const ang = Math.atan2(sy - cy, sx - cx);
-      a.style.left = `${sx}px`;
-      a.style.top = `${sy}px`;
-      a.style.transform = `translate(-50%,-50%) rotate(${ang}rad)`;
-      a.style.display = 'block';
+      a.el.style.left = `${sx}px`;
+      a.el.style.top = `${sy}px`;
+      a.el.style.transform = `translate(-50%,-50%) rotate(${ang}rad)`;
+      a.el.style.borderLeftColor = st.color;
+      a.el.style.display = 'block';
+      // keep the glyph upright by cancelling the parent rotation
+      a.tag.textContent = st.glyph;
+      a.tag.style.color = st.color;
+      a.tag.style.transform = `rotate(${-ang}rad)`;
     }
-    for (let i = used; i < this._arrows.length; i++) this._arrows[i].style.display = 'none';
+    for (let i = used; i < this._arrows.length; i++) this._arrows[i].el.style.display = 'none';
   }
 
   _arrow(i) {
     if (!this._arrows[i]) {
       const el = document.createElement('div');
       el.className = 'target-arrow';
+      const tag = document.createElement('span');
+      tag.className = 'arrow-tag';
+      el.appendChild(tag);
       this._arrowHost.appendChild(el);
-      this._arrows[i] = el;
+      this._arrows[i] = { el, tag };
     }
     return this._arrows[i];
   }

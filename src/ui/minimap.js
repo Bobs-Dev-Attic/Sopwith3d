@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { WORLD } from '../core/config.js';
+import { styleFor } from './targetStyles.js';
 
 // Top-right radar: player at centre (north-up) with a heading arrow, live
 // enemies, ground targets, and the current objectives (which clamp to the rim
@@ -12,6 +13,27 @@ export default class Minimap {
     this.range = WORLD.combatRadius * 0.9;
     this._fwd = new THREE.Vector3();
     this._t = 0;
+  }
+
+  // draw a small typed marker (fillStyle/alpha set by caller) at px,py
+  _marker(px, py, r, shape) {
+    const x = this.x;
+    x.beginPath();
+    switch (shape) {
+      case 'square':
+        x.rect(px - r, py - r, r * 2, r * 2); break;
+      case 'rect':
+        x.rect(px - r * 1.4, py - r * 0.7, r * 2.8, r * 1.4); break;
+      case 'diamond':
+        x.moveTo(px, py - r); x.lineTo(px + r, py); x.lineTo(px, py + r); x.lineTo(px - r, py); x.closePath(); break;
+      case 'triangle':
+        x.moveTo(px, py - r); x.lineTo(px + r, py + r); x.lineTo(px - r, py + r); x.closePath(); break;
+      case 'circle':
+        x.arc(px, py, r, 0, Math.PI * 2); break;
+      default: // 'dot'
+        x.arc(px, py, r * 0.82, 0, Math.PI * 2); break;
+    }
+    x.fill();
   }
 
   update(dt, playerPos, playerQuat, enemies, groundTargets, objectives) {
@@ -34,14 +56,17 @@ export default class Minimap {
     const rel = (wx, wz) => [cx + (wx - playerPos.x) * scale, cy + (wz - playerPos.z) * scale];
     const within = (px, py) => ((px - cx) ** 2 + (py - cy) ** 2) <= (rim - 1) ** 2;
 
-    // ground targets (dim)
+    // ground targets — coloured + shaped by type, drawn dim
+    x.globalAlpha = 0.7;
     for (const t of groundTargets) {
       if (!t.alive) continue;
       const [px, py] = rel(t.pos.x, t.pos.z);
       if (!within(px, py)) continue;
-      x.fillStyle = t.type === 'balloon' ? 'rgba(210,190,90,0.9)' : 'rgba(200,120,60,0.85)';
-      x.beginPath(); x.arc(px, py, t.type === 'bunker' ? 2.6 : 2, 0, Math.PI * 2); x.fill();
+      const st = styleFor(t.type);
+      x.fillStyle = st.color;
+      this._marker(px, py, 2.6, st.shape);
     }
+    x.globalAlpha = 1;
 
     // enemy aircraft
     for (const e of enemies) {
@@ -52,20 +77,25 @@ export default class Minimap {
       x.beginPath(); x.arc(px, py, 2.6, 0, Math.PI * 2); x.fill();
     }
 
-    // objectives — pulse, and clamp to the rim if out of range
+    // objectives — coloured by type, pulsing, clamped to the rim if out of range
     const pulse = 0.5 + 0.5 * Math.sin(this._t * 5);
     for (const o of objectives) {
-      let dx = (o.x - playerPos.x) * scale;
-      let dz = (o.z - playerPos.z) * scale;
+      const op = o.pos || o;             // tolerate a bare Vector3
+      const st = styleFor(o.type);
+      let dx = (op.x - playerPos.x) * scale;
+      let dz = (op.z - playerPos.z) * scale;
       const d = Math.hypot(dx, dz);
       let edge = false;
       if (d > rim - 2) { const k = (rim - 4) / d; dx *= k; dz *= k; edge = true; }
       const px = cx + dx, py = cy + dz;
-      x.fillStyle = `rgba(232,196,106,${0.5 + pulse * 0.5})`;
-      x.beginPath(); x.arc(px, py, edge ? 2.4 : 3.4, 0, Math.PI * 2); x.fill();
+      x.globalAlpha = 0.5 + pulse * 0.5;
+      x.fillStyle = st.color;
+      this._marker(px, py, edge ? 2.6 : 3.6, st.shape);
+      x.globalAlpha = 1;
       if (!edge) {
-        x.strokeStyle = `rgba(232,196,106,${0.4 + pulse * 0.4})`; x.lineWidth = 1.4;
-        x.beginPath(); x.arc(px, py, 5.5, 0, Math.PI * 2); x.stroke();
+        x.strokeStyle = st.color; x.globalAlpha = 0.4 + pulse * 0.4; x.lineWidth = 1.4;
+        x.beginPath(); x.arc(px, py, 5.8, 0, Math.PI * 2); x.stroke();
+        x.globalAlpha = 1;
       }
     }
     x.restore();

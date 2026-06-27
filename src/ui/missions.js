@@ -32,8 +32,7 @@ export const MISSIONS = [
       return {
         text: () => `Strafe ${killed(nests)}/3 · Bomb ${killed(bunkers)}/2 · Drones ${downed(drones)}/2`,
         isWon: () => nests.every((t) => !t.alive) && bunkers.every((t) => !t.alive) && downed(drones) >= 2,
-        liveMarks: () => [...nests, ...bunkers].filter((t) => t.alive).map((t) => t.pos)
-          .concat(drones.filter((d) => d.alive).map((d) => d.state.position)),
+        liveMarks: () => groundMarks([...nests, ...bunkers]).concat(planeMarks(drones)),
       };
     },
   },
@@ -48,7 +47,7 @@ export const MISSIONS = [
         text: () => `Destroy machine-gun nests  ${killed(targets)}/3`,
         isWon: () => targets.every((t) => !t.alive),
         targets,
-        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+        liveMarks: () => groundMarks(targets),
       };
     },
   },
@@ -64,7 +63,7 @@ export const MISSIONS = [
         text: () => `Flatten the bunkers  ${killed(targets)}/2`,
         isWon: () => targets.every((t) => !t.alive),
         targets,
-        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+        liveMarks: () => groundMarks(targets),
       };
     },
   },
@@ -90,7 +89,7 @@ export const MISSIONS = [
         text: () => `Shoot down Fokkers  ${downed(enemies)}/${need}`,
         isWon: () => downed(enemies) >= need,
         enemies,
-        liveMarks: () => enemies.filter((e) => e.alive).map((e) => e.state.position),
+        liveMarks: () => planeMarks(enemies),
       };
     },
   },
@@ -106,7 +105,7 @@ export const MISSIONS = [
         text: () => `Knock out batteries  ${killed(targets)}/${need}`,
         isWon: () => killed(targets) >= need,
         targets,
-        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+        liveMarks: () => groundMarks(targets),
       };
     },
   },
@@ -122,7 +121,7 @@ export const MISSIONS = [
         text: () => `Destroy vehicles  ${killed(targets)}/${need}`,
         isWon: () => killed(targets) >= need,
         targets,
-        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+        liveMarks: () => groundMarks(targets),
       };
     },
   },
@@ -139,7 +138,7 @@ export const MISSIONS = [
         text: () => `Train ${killed(trains)}/1 · Barracks ${killed(huts)}/2`,
         isWon: () => trains.every((t) => !t.alive) && huts.every((t) => !t.alive),
         targets,
-        liveMarks: () => targets.filter((t) => t.alive).map((t) => t.pos),
+        liveMarks: () => groundMarks(targets),
       };
     },
   },
@@ -147,6 +146,12 @@ export const MISSIONS = [
 
 const killed = (arr) => arr.filter((t) => !t.alive).length;
 const downed = (arr) => arr.filter((e) => !e.alive).length;
+
+// Off-screen-arrow / minimap marks carry the target type so the HUD can
+// colour and label each one. Ground targets expose .type + .pos; aircraft
+// expose .state.position and are tagged 'plane'.
+const groundMarks = (arr) => arr.filter((t) => t.alive).map((t) => ({ pos: t.pos, type: t.type }));
+const planeMarks = (arr) => arr.filter((e) => e.alive).map((e) => ({ pos: e.state.position, type: 'plane' }));
 
 export default class MissionManager {
   constructor(ctx) {
