@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import GroundDetail from './groundDetail.js';
 import { FIELD, WORLD } from '../core/config.js';
 import { sampleHeight } from './terrain.js';
+import { styleFor } from '../ui/targetStyles.js';
 
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, ...o });
 
@@ -39,6 +40,7 @@ class GroundTarget {
     if (!this.alive) return;
     this.alive = false;
     if (this._marker) this._marker.visible = false;
+    if (this._rings) for (const r of this._rings) r.mesh.visible = false;
     if (this.onDestroyed) this.onDestroyed(this);
   }
 }
@@ -62,6 +64,8 @@ export default class Battlefield {
 
     // Front lines wander a little each sortie.
     const frontZ = (-240 - this.rng() * 80) * FIELD;
+    this.frontZ = frontZ;             // no-man's-land centre (for ambience)
+    this.frontSpan = 9000 * FIELD;    // how wide the trench frontage runs
     this._buildTrenchLine(frontZ);
     this._buildTrenchLine(frontZ + 520 * FIELD);
     this._buildTrenchLine(frontZ - 460 * FIELD);
@@ -544,13 +548,19 @@ export default class Battlefield {
     }
   }
 
-  // attach a glowing objective beam to a target
+  // attach a glowing objective beam + radiating ground rings to a target
   markObjective(target) {
-    if (target._marker) { target._marker.visible = true; return; }
+    if (target._marker) {
+      target._marker.visible = true;
+      if (target._rings) for (const r of target._rings) r.mesh.visible = true;
+      return;
+    }
+    const st = styleFor(target.type);
+    const tint = new THREE.Color(st.color);
     const beam = new THREE.Mesh(
       new THREE.PlaneGeometry(14, 260),
       new THREE.MeshBasicMaterial({
-        map: this._markerTex, color: 0xe8c46a, transparent: true,
+        map: this._markerTex, color: tint, transparent: true,
         opacity: 0.4, depthWrite: false, side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
       })
@@ -559,6 +569,25 @@ export default class Battlefield {
     target._marker = beam;
     beam.userData.spin = true;
     this.scene.add(beam);
+
+    // expanding/fading ground rings that radiate out from the target
+    if (!this._ringGeo) {
+      this._ringGeo = new THREE.RingGeometry(0.86, 1.0, 44);
+      this._ringGeo.rotateX(-Math.PI / 2);
+    }
+    const gy = sampleHeight(target.pos.x, target.pos.z) + 0.6;
+    const r0 = target.radius * 1.3;
+    const r1 = r0 + 46;
+    target._rings = [];
+    for (let i = 0; i < 2; i++) {                 // two rings, half a cycle apart
+      const mesh = new THREE.Mesh(this._ringGeo, new THREE.MeshBasicMaterial({
+        color: tint, transparent: true, opacity: 0, depthWrite: false,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+      }));
+      mesh.position.set(target.pos.x, gy, target.pos.z);
+      this.scene.add(mesh);
+      target._rings.push({ mesh, phase: i * 0.5, r0, r1 });
+    }
   }
 
   dispose() {
@@ -570,7 +599,11 @@ export default class Battlefield {
         this.scene.remove(t._marker);
         t._marker.geometry.dispose();
       }
+      if (t._rings) {
+        for (const r of t._rings) { this.scene.remove(r.mesh); r.mesh.material.dispose(); }
+      }
     }
+    if (this._ringGeo) this._ringGeo.dispose();
   }
 
   update(dt, player, fireCb, camera) {
@@ -582,6 +615,16 @@ export default class Battlefield {
       if (t._marker && t._marker.visible && camera) {
         t._marker.lookAt(camera.position.x, t._marker.position.y, camera.position.z);
         t._marker.material.opacity = pulse;  // fade in and out
+      }
+      // radiating rings: each ring grows and fades on a repeating cycle
+      if (t._rings && t.alive) {
+        for (const r of t._rings) {
+          r.phase = (r.phase + dt * 0.7) % 1;       // ~1.4s per pulse
+          const p = r.phase;
+          const rad = r.r0 + (r.r1 - r.r0) * p;
+          r.mesh.scale.set(rad, rad, rad);
+          r.mesh.material.opacity = 0.6 * Math.min(1, p * 6) * (1 - p);
+        }
       }
     }
   }
