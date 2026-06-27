@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FIELD } from '../core/config.js';
 
 // Three escalating sorties. Each mission's begin() wires up the live
 // objective against the battlefield and returns a small runtime tracker.
@@ -15,7 +16,7 @@ export const MISSIONS = [
       // practice ground targets, laid out ahead of the start point
       const nests = ctx.battlefield.mgNests.slice(0, 3);
       const bunkers = ctx.battlefield.bunkers.slice(0, 2);
-      const place = (t, x, z) => { t.group.position.set(x, 0, z); t.pos.set(x, t.pos.y, z); };
+      const place = (t, x, z) => { t.group.position.set(x * FIELD, 0, z * FIELD); t.pos.set(x * FIELD, t.pos.y, z * FIELD); };
       place(nests[0], -260, -280); place(nests[1], 260, -440); place(nests[2], 0, -640);
       place(bunkers[0], -260, -920); place(bunkers[1], 260, -1040);
       [...nests, ...bunkers].forEach((t) => ctx.battlefield.markObjective(t));
@@ -23,7 +24,7 @@ export const MISSIONS = [
       // disarmed target drones for gunnery practice
       const drones = [];
       [[-320, 360, -780], [340, 410, -1000]].forEach(([x, y, z]) => {
-        const e = ctx.spawnEnemy(new THREE.Vector3(x, y, z), Math.PI);
+        const e = ctx.spawnEnemy(new THREE.Vector3(x * FIELD, y, z * FIELD), Math.PI);
         e.onFire = () => {};       // they won't shoot back
         drones.push(e);
       });
@@ -77,9 +78,9 @@ export const MISSIONS = [
       ctx.battlefield.balloons.forEach((b) => ctx.battlefield.markObjective(b));
       const enemies = [];
       const spawnPts = [
-        new THREE.Vector3(-300, 360, -900),
-        new THREE.Vector3(350, 420, -1100),
-        new THREE.Vector3(0, 480, -1400),
+        new THREE.Vector3(-300 * FIELD, 360, -900 * FIELD),
+        new THREE.Vector3(350 * FIELD, 420, -1100 * FIELD),
+        new THREE.Vector3(0, 480, -1400 * FIELD),
       ];
       spawnPts.forEach((p, i) => {
         const e = ctx.spawnEnemy(p, Math.PI + i * 0.3);
